@@ -49,15 +49,7 @@ AeroTech is an automated, sensor-driven aeroponics system designed to enhance ve
 
 ## System Architecture
 
-```text
-[Sensors] → [Microcontroller] → [Pump/Fan Control]
-                     ↓
-             [SMS Alerts Module]
-                     ↓
-            [Cloud Dashboard API]
-                     ↓
-          [Web Interface / Mobile UI]
-```
+![Block Diagram](Docs/AeroTech_BlockDiagram.jpg)
 
 ---
 
