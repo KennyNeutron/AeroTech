@@ -1,18 +1,6 @@
 bool Screen_MainMenu_INIT = false;
 
-// Example variables for sensor data
-float phValue = 7.4;
-float tdsValue = 774.0;
-float waterLevel = 104.0;
-float temperature = 30.4;
 
-// Day/Night mode variable (you can set this based on time or user preference)
-bool isDayTime = true; // Set to false for night mode
-
-// Example time variables
-uint8_t Time_HH = 10;
-uint8_t Time_MM = 0;
-uint8_t Time_SS = 0;
 
 // Store references to UI elements for efficient updates
 lv_obj_t* ph_value_label;
@@ -40,13 +28,13 @@ lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font
 void getPhStatus(float ph, const char** status, lv_color_t* color) {
   if (ph > 6.5) {
     *status = "Too High";
-    *color = lv_color_hex(0xFF4444); // Red for alkaline
+    *color = lv_color_hex(0xFF4444);  // Red for alkaline
   } else if (ph >= 5.5 && ph <= 6.5) {
     *status = "Right Value";
-    *color = lv_color_hex(0x44AA44); // Green for ideal
+    *color = lv_color_hex(0x44AA44);  // Green for ideal
   } else {
     *status = "Too Low";
-    *color = lv_color_hex(0xFF4444); // Red for acidic
+    *color = lv_color_hex(0xFF4444);  // Red for acidic
   }
 }
 
@@ -54,13 +42,13 @@ void getPhStatus(float ph, const char** status, lv_color_t* color) {
 void getTDSStatus(float tds, const char** status, lv_color_t* color) {
   if (tds < 560) {
     *status = "Too Low";
-    *color = lv_color_hex(0xFF8844); // Orange for weak nutrients
+    *color = lv_color_hex(0xFF8844);  // Orange for weak nutrients
   } else if (tds >= 560 && tds <= 840) {
     *status = "Normal";
-    *color = lv_color_hex(0x44AA44); // Green for normal
+    *color = lv_color_hex(0x44AA44);  // Green for normal
   } else {
     *status = "Too High";
-    *color = lv_color_hex(0xFF4444); // Red for strong nutrients
+    *color = lv_color_hex(0xFF4444);  // Red for strong nutrients
   }
 }
 
@@ -68,13 +56,13 @@ void getTDSStatus(float tds, const char** status, lv_color_t* color) {
 void getWaterLevelStatus(float level, const char** status, lv_color_t* color) {
   if (level >= 70) {
     *status = "FULL";
-    *color = lv_color_hex(0x4488FF); // Blue for full
+    *color = lv_color_hex(0x4488FF);  // Blue for full
   } else if (level >= 40 && level <= 69) {
     *status = "MID";
-    *color = lv_color_hex(0x44AA44); // Green for mid
+    *color = lv_color_hex(0x44AA44);  // Green for mid
   } else {
     *status = "LOW";
-    *color = lv_color_hex(0xFF4444); // Red for low
+    *color = lv_color_hex(0xFF4444);  // Red for low
   }
 }
 
@@ -84,50 +72,50 @@ void getTemperatureStatus(float temp, bool isDay, const char** status, lv_color_
     // Day conditions: 18-24°C ideal
     if (temp < 18) {
       *status = "Too Cold";
-      *color = lv_color_hex(0x4488FF); // Blue for cold
+      *color = lv_color_hex(0x4488FF);  // Blue for cold
     } else if (temp >= 18 && temp <= 24) {
       *status = "Normal";
-      *color = lv_color_hex(0x44AA44); // Green for normal
+      *color = lv_color_hex(0x44AA44);  // Green for normal
     } else {
       *status = "Too Hot";
-      *color = lv_color_hex(0xFF4444); // Red for hot
+      *color = lv_color_hex(0xFF4444);  // Red for hot
     }
   } else {
     // Night conditions: 12-18°C ideal
     if (temp < 12) {
       *status = "Too Cold";
-      *color = lv_color_hex(0x4488FF); // Blue for cold
+      *color = lv_color_hex(0x4488FF);  // Blue for cold
     } else if (temp >= 12 && temp <= 18) {
       *status = "Normal";
-      *color = lv_color_hex(0x44AA44); // Green for normal
+      *color = lv_color_hex(0x44AA44);  // Green for normal
     } else {
       *status = "Too Hot";
-      *color = lv_color_hex(0xFF4444); // Red for hot
+      *color = lv_color_hex(0xFF4444);  // Red for hot
     }
   }
 }
 
 // Helper function to create a data panel and store references to updatable elements
-void create_data_panel_with_refs(lv_obj_t* parent, const char* symbol, const char* title, 
-                                 const char* unit, float value, const char* status, 
+void create_data_panel_with_refs(lv_obj_t* parent, const char* symbol, const char* title,
+                                 const char* unit, float value, const char* status,
                                  lv_color_t accent_color, int x, int y,
                                  lv_obj_t** panel_ref, lv_obj_t** value_label_ref, lv_obj_t** status_label_ref) {
   // Panel container - smaller size
   lv_obj_t* panel = lv_obj_create(parent);
   *panel_ref = panel;
-  lv_obj_set_size(panel, 130, 80);  
-  
+  lv_obj_set_size(panel, 130, 80);
+
   // Dark theme styling
   lv_obj_set_style_bg_color(panel, lv_color_hex(0x1a1a1a), 0);  // Dark background
   lv_obj_set_style_border_color(panel, accent_color, 0);
   lv_obj_set_style_border_width(panel, 1, 0);  // Thinner border
-  lv_obj_set_style_radius(panel, 8, 0);  // Rounded corners
+  lv_obj_set_style_radius(panel, 8, 0);        // Rounded corners
   lv_obj_align(panel, LV_ALIGN_TOP_LEFT, x, y);
 
   // Create title with symbol
   char title_with_symbol[64];
   snprintf(title_with_symbol, sizeof(title_with_symbol), "%s %s", symbol, title);
-  
+
   lv_obj_t* label_title = create_label(panel, title_with_symbol, &lv_font_montserrat_12, lv_color_white());
   lv_obj_align(label_title, LV_ALIGN_TOP_MID, 0, 2);
 
@@ -218,8 +206,8 @@ void Screen_MainMenu_PRE() {
   lv_obj_set_style_bg_opa(SCR_MainMenu, LV_OPA_COVER, 0);
 
   // Screen title with symbol
-  lv_obj_t* Screen_Title = create_label(SCR_MainMenu, LV_SYMBOL_SETTINGS " AEROTECH - Aerophonics Control", 
-                                       &lv_font_montserrat_14, lv_color_white());
+  lv_obj_t* Screen_Title = create_label(SCR_MainMenu, LV_SYMBOL_SETTINGS " AEROTECH - Aerophonics Control",
+                                        &lv_font_montserrat_14, lv_color_white());
   lv_obj_align(Screen_Title, LV_ALIGN_TOP_MID, 0, 0);
 
   // Format the time as string with clock symbol

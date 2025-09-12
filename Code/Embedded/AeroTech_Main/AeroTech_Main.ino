@@ -33,13 +33,20 @@
 #include <lvgl.h>
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
+#include "DataStructure.h"
 // #include "font_Font90Icon_48_1bpp.c"
 
-// External sensor variables (declared in Screen_MainMenu.ino)
-extern float phValue;
-extern float tdsValue;
-extern float waterLevel;
-extern float temperature;
+//AeroTech Variables
+float phValue = 0.0;
+float tdsValue = 0.0;
+float waterLevel = 0.0;
+float temperature = 0.0;
+
+bool isDayTime = true;  // Set to false for night mode
+
+uint8_t Time_HH = 10;
+uint8_t Time_MM = 0;
+uint8_t Time_SS = 0;
 
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color);
 
@@ -72,7 +79,7 @@ uint32_t draw_buf[DRAW_BUF_SIZE / 4];
 
 // Randomizer variables
 unsigned long lastUpdateTime = 0;
-const unsigned long UPDATE_INTERVAL = 2000; // Update every 2 seconds
+const unsigned long UPDATE_INTERVAL = 2000;  // Update every 2 seconds
 
 // If logging is enabled, it will inform the user about what is happening in the library
 void log_print(lv_log_level_t level, const char* buf) {
@@ -83,23 +90,6 @@ void log_print(lv_log_level_t level, const char* buf) {
 
 // Function to generate realistic random sensor values
 void updateSensorValues() {
-  // pH: Range 5.0 to 7.0 (focused on the critical ranges for better testing)
-  phValue = random(500, 700) / 100.0;
-  
-  // TDS: Range 400 to 1000 ppm (spans across all three conditions)
-  tdsValue = random(400, 1000);
-  
-  // Water Level: Range 20 to 100L (spans across all conditions)
-  waterLevel = random(20, 100);
-  
-  // Temperature: Range 10 to 30°C (spans day/night conditions)
-  temperature = random(100, 300) / 10.0;
-  
-  // Print values to Serial for debugging
-  Serial.print("pH: "); Serial.print(phValue);
-  Serial.print(" | TDS: "); Serial.print(tdsValue);
-  Serial.print(" | Water: "); Serial.print(waterLevel);
-  Serial.print("L | Temp: "); Serial.println(temperature);
 }
 
 // Get the Touchscreen data
@@ -160,24 +150,47 @@ void setup() {
   // Set the callback function to read Touchscreen input
   lv_indev_set_read_cb(indev, touchscreen_read);
 
-  // Generate initial sensor values
-  updateSensorValues();
-  
   Serial.println("AeroTech System Initialized");
-  Serial.println("Sensor values will update every 2 seconds");
-  Serial.println("Optimized for efficient UI updates - no screen recreation!");
 }
 
 void loop() {
-  // Check if it's time to update sensor values
-  unsigned long currentTime = millis();
-  if (currentTime - lastUpdateTime >= UPDATE_INTERVAL) {
-    updateSensorValues();
-    lastUpdateTime = currentTime;
-    // The Screen_MainMenu() function will handle efficient updates
+  if (Serial.available() > 0) {
+    Serial.print("Data is Available!");
+    if (Serial.read() == 'A' && Serial.available() >= sizeof(AeroTechData)) {
+      Serial.readBytes((uint8_t*)&Data_AeroTech, sizeof(AeroTechData));
+
+      // Validate Header and Footer
+      if (Data_AeroTech.Header == 0xAA && Data_AeroTech.Footer == 0xFF) {
+        Time_HH = Data_AeroTech.AD_Time_HH;
+        Time_MM = Data_AeroTech.AD_Time_MM;
+        Time_SS = Data_AeroTech.AD_Time_SS;
+        phValue = Data_AeroTech.AD_pH;
+        tdsValue = Data_AeroTech.AD_TDS;
+        waterLevel = Data_AeroTech.AD_WaterLevel;
+        temperature = Data_AeroTech.AD_Temperature;
+
+        // Print received data for debugging
+        Serial.print("Data received - Time: ");
+        Serial.print(Time_HH);
+        Serial.print(":");
+        Serial.print(Time_MM);
+        Serial.print(":");
+        Serial.print(Time_SS);
+        Serial.print(" | pH: ");
+        Serial.print(phValue);
+        Serial.print(" | TDS: ");
+        Serial.print(tdsValue);
+        Serial.print(" | Water: ");
+        Serial.print(waterLevel);
+        Serial.print("L | Temp: ");
+        Serial.println(temperature);
+      } else {
+        Serial.println("Invalid packet - Header/Footer mismatch");
+      }
+    }
   }
-  
-  Screen_MainMenu(); // This will now efficiently update existing elements
+
+  Screen_MainMenu();  // This will now efficiently update existing elements
   lv_task_handler();  // let the GUI do its work
   lv_tick_inc(5);     // tell LVGL how much time has passed
   delay(5);           // let this time pass
