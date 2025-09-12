@@ -6,6 +6,9 @@ float tdsValue = 774.0;
 float waterLevel = 104.0;
 float temperature = 30.4;
 
+// Day/Night mode variable (you can set this based on time or user preference)
+bool isDayTime = true; // Set to false for night mode
+
 // Example time variables
 uint8_t Time_HH = 10;
 uint8_t Time_MM = 0;
@@ -13,6 +16,77 @@ uint8_t Time_SS = 0;
 
 // Forward declaration of your custom create_label()
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color);
+
+// Helper function to determine pH status and color
+void getPhStatus(float ph, const char** status, lv_color_t* color) {
+  if (ph > 6.5) {
+    *status = "Too High";
+    *color = lv_color_hex(0xFF4444); // Red for alkaline
+  } else if (ph >= 5.5 && ph <= 6.5) {
+    *status = "Right Value";
+    *color = lv_color_hex(0x44AA44); // Green for ideal
+  } else {
+    *status = "Too Low";
+    *color = lv_color_hex(0xFF4444); // Red for acidic
+  }
+}
+
+// Helper function to determine TDS status and color
+void getTDSStatus(float tds, const char** status, lv_color_t* color) {
+  if (tds < 560) {
+    *status = "Too Low";
+    *color = lv_color_hex(0xFF8844); // Orange for weak nutrients
+  } else if (tds >= 560 && tds <= 840) {
+    *status = "Normal";
+    *color = lv_color_hex(0x44AA44); // Green for normal
+  } else {
+    *status = "Too High";
+    *color = lv_color_hex(0xFF4444); // Red for strong nutrients
+  }
+}
+
+// Helper function to determine Water Level status and color
+void getWaterLevelStatus(float level, const char** status, lv_color_t* color) {
+  if (level >= 70) {
+    *status = "FULL";
+    *color = lv_color_hex(0x4488FF); // Blue for full
+  } else if (level >= 40 && level <= 69) {
+    *status = "MID";
+    *color = lv_color_hex(0x44AA44); // Green for mid
+  } else {
+    *status = "LOW";
+    *color = lv_color_hex(0xFF4444); // Red for low
+  }
+}
+
+// Helper function to determine Temperature status and color based on day/night
+void getTemperatureStatus(float temp, bool isDay, const char** status, lv_color_t* color) {
+  if (isDay) {
+    // Day conditions: 18-24°C ideal
+    if (temp < 18) {
+      *status = "Too Cold";
+      *color = lv_color_hex(0x4488FF); // Blue for cold
+    } else if (temp >= 18 && temp <= 24) {
+      *status = "Normal";
+      *color = lv_color_hex(0x44AA44); // Green for normal
+    } else {
+      *status = "Too Hot";
+      *color = lv_color_hex(0xFF4444); // Red for hot
+    }
+  } else {
+    // Night conditions: 12-18°C ideal
+    if (temp < 12) {
+      *status = "Too Cold";
+      *color = lv_color_hex(0x4488FF); // Blue for cold
+    } else if (temp >= 12 && temp <= 18) {
+      *status = "Normal";
+      *color = lv_color_hex(0x44AA44); // Green for normal
+    } else {
+      *status = "Too Hot";
+      *color = lv_color_hex(0xFF4444); // Red for hot
+    }
+  }
+}
 
 // Helper function to create a smaller data panel with dark theme and symbols
 lv_obj_t* create_data_panel(lv_obj_t* parent, const char* symbol, const char* title, 
@@ -48,7 +122,7 @@ lv_obj_t* create_data_panel(lv_obj_t* parent, const char* symbol, const char* ti
 
   // Status - smaller font
   lv_obj_t* label_status = create_label(panel, status, &lv_font_montserrat_10, accent_color);
-  lv_obj_align(label_status, LV_ALIGN_BOTTOM_MID, 0, -3);
+  lv_obj_align(label_status, LV_ALIGN_BOTTOM_MID, 0, -2);
 
   return panel;
 }
@@ -78,29 +152,39 @@ void Screen_MainMenu_PRE() {
   lv_obj_t* Time_Label = create_label(SCR_MainMenu, STR_Time, &lv_font_montserrat_18, lv_color_white());
   lv_obj_align(Time_Label, LV_ALIGN_TOP_LEFT, 0, 25);
 
-  // Smaller panels arranged in 2x2 grid with more spacing
+  // Get status and colors for each sensor using the new conditions
+  const char* phStatus;
+  lv_color_t phColor;
+  getPhStatus(phValue, &phStatus, &phColor);
+
+  const char* tdsStatus;
+  lv_color_t tdsColor;
+  getTDSStatus(tdsValue, &tdsStatus, &tdsColor);
+
+  const char* waterStatus;
+  lv_color_t waterColor;
+  getWaterLevelStatus(waterLevel, &waterStatus, &waterColor);
+
+  const char* tempStatus;
+  lv_color_t tempColor;
+  getTemperatureStatus(temperature, isDayTime, &tempStatus, &tempColor);
+
+  // Create panels with updated conditions
   // pH Panel (top-left)
   create_data_panel(SCR_MainMenu, LV_SYMBOL_DOWNLOAD, "pH Level", "pH", phValue,
-                    (phValue < 6.5 || phValue > 7.5) ? "Critical" : "Normal",
-                    (phValue < 6.5 || phValue > 7.5) ? lv_color_hex(0xFF4444) : lv_color_hex(0x44AA44), 
-                    20, 55);
+                    phStatus, phColor, 20, 55);
 
   // TDS Panel (top-right)
   create_data_panel(SCR_MainMenu, LV_SYMBOL_CHARGE, "TDS", "ppm", tdsValue,
-                    "Normal",
-                    lv_color_hex(0x44AA44), 170, 55);
+                    tdsStatus, tdsColor, 170, 55);
 
   // Water Level Panel (bottom-left)
-  create_data_panel(SCR_MainMenu, LV_SYMBOL_BATTERY_3, "Water Level", "%", waterLevel,
-                    (waterLevel < 20 || waterLevel > 100) ? "Critical" : "Normal",
-                    (waterLevel < 20 || waterLevel > 100) ? lv_color_hex(0xFF4444) : lv_color_hex(0x4488FF), 
-                    20, 145);
+  create_data_panel(SCR_MainMenu, LV_SYMBOL_BATTERY_3, "Water Level", "L", waterLevel,
+                    waterStatus, waterColor, 20, 145);
 
   // Temperature Panel (bottom-right)
   create_data_panel(SCR_MainMenu, LV_SYMBOL_EDIT, "Temperature", "°C", temperature,
-                    (temperature > 35.0 || temperature < 18.0) ? "Critical" : "Normal",
-                    (temperature > 35.0 || temperature < 18.0) ? lv_color_hex(0xFF4444) : lv_color_hex(0xFF8844), 
-                    170, 145);
+                    tempStatus, tempColor, 170, 145);
 }
 
 void Screen_MainMenu() {

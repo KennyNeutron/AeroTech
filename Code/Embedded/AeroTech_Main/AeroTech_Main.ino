@@ -34,6 +34,13 @@
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 // #include "font_Font90Icon_48_1bpp.c"
+
+// External sensor variables (declared in Screen_MainMenu.ino)
+extern float phValue;
+extern float tdsValue;
+extern float waterLevel;
+extern float temperature;
+
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color);
 
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color) {
@@ -63,11 +70,36 @@ int x, y, z;
 #define DRAW_BUF_SIZE (SCREEN_WIDTH * SCREEN_HEIGHT / 6 * (LV_COLOR_DEPTH / 8))
 uint32_t draw_buf[DRAW_BUF_SIZE / 4];
 
+// Randomizer variables
+unsigned long lastUpdateTime = 0;
+const unsigned long UPDATE_INTERVAL = 2000; // Update every 2 seconds
+
 // If logging is enabled, it will inform the user about what is happening in the library
 void log_print(lv_log_level_t level, const char* buf) {
   LV_UNUSED(level);
   Serial.println(buf);
   Serial.flush();
+}
+
+// Function to generate realistic random sensor values
+void updateSensorValues() {
+  // pH: Range 5.5 to 8.5 (realistic for hydroponic systems)
+  phValue = random(550, 850) / 100.0;
+  
+  // TDS: Range 400 to 1200 ppm (typical for nutrient solutions)
+  tdsValue = random(400, 1200);
+  
+  // Water Level: Range 15 to 120% (can go over 100% to simulate overflow)
+  waterLevel = random(15, 120);
+  
+  // Temperature: Range 18 to 38°C (realistic for growing environments)
+  temperature = random(180, 380) / 10.0;
+  
+  // Print values to Serial for debugging
+  Serial.print("pH: "); Serial.print(phValue);
+  Serial.print(" | TDS: "); Serial.print(tdsValue);
+  Serial.print(" | Water: "); Serial.print(waterLevel);
+  Serial.print("% | Temp: "); Serial.println(temperature);
 }
 
 // Get the Touchscreen data
@@ -101,6 +133,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println(LVGL_Arduino);
 
+  // Initialize random seed
+  randomSeed(analogRead(0));
+
   // Start LVGL
   lv_init();
   // Register print function for debugging
@@ -124,9 +159,27 @@ void setup() {
   lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
   // Set the callback function to read Touchscreen input
   lv_indev_set_read_cb(indev, touchscreen_read);
+
+  // Generate initial sensor values
+  updateSensorValues();
+  
+  Serial.println("AeroTech System Initialized");
+  Serial.println("Sensor values will update every 2 seconds");
 }
 
 void loop() {
+  // Check if it's time to update sensor values
+  unsigned long currentTime = millis();
+  if (currentTime - lastUpdateTime >= UPDATE_INTERVAL) {
+    updateSensorValues();
+    lastUpdateTime = currentTime;
+    
+    // Force screen refresh to show new values
+    // Reset the screen to update with new sensor values
+    extern bool Screen_MainMenu_INIT;
+    Screen_MainMenu_INIT = false;
+  }
+  
   Screen_MainMenu();
   lv_task_handler();  // let the GUI do its work
   lv_tick_inc(5);     // tell LVGL how much time has passed
