@@ -48,6 +48,9 @@ uint8_t Time_HH = 10;
 uint8_t Time_MM = 0;
 uint8_t Time_SS = 0;
 
+// Custom Serial on GPIO22 (TX) and GPIO27 (RX)
+HardwareSerial CustomSerial(2);
+
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color);
 
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color) {
@@ -123,6 +126,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println(LVGL_Arduino);
 
+  // Initialize custom serial on GPIO22 (TX) and GPIO27 (RX)
+  CustomSerial.begin(115200, SERIAL_8N1, 22, 27);
+
   // Initialize random seed
   randomSeed(analogRead(0));
 
@@ -154,13 +160,14 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available() > 0) {
-    Serial.print("Data is Available!");
-    if (Serial.read() == 'A' && Serial.available() >= sizeof(AeroTechData)) {
-      Serial.readBytes((uint8_t*)&Data_AeroTech, sizeof(AeroTechData));
+  if (CustomSerial.available() > 0) {
+    Serial.println("Data is Available!");
+    if (CustomSerial.read() == 'A' && CustomSerial.available() >= sizeof(AeroTechData)) {
+      CustomSerial.readBytes((uint8_t*)&Data_AeroTech, sizeof(AeroTechData));
+      Serial.println("A is peeked! Data_AeroTech is read");
 
       // Validate Header and Footer
-      if (Data_AeroTech.Header == 0xAA && Data_AeroTech.Footer == 0xFF) {
+      if (Data_AeroTech.Header == 0xAA && Data_AeroTech.Footer == 0x55) {
         Time_HH = Data_AeroTech.AD_Time_HH;
         Time_MM = Data_AeroTech.AD_Time_MM;
         Time_SS = Data_AeroTech.AD_Time_SS;
