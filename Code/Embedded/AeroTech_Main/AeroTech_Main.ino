@@ -83,23 +83,23 @@ void log_print(lv_log_level_t level, const char* buf) {
 
 // Function to generate realistic random sensor values
 void updateSensorValues() {
-  // pH: Range 5.5 to 8.5 (realistic for hydroponic systems)
-  phValue = random(550, 850) / 100.0;
+  // pH: Range 5.0 to 7.0 (focused on the critical ranges for better testing)
+  phValue = random(500, 700) / 100.0;
   
-  // TDS: Range 400 to 1200 ppm (typical for nutrient solutions)
-  tdsValue = random(400, 1200);
+  // TDS: Range 400 to 1000 ppm (spans across all three conditions)
+  tdsValue = random(400, 1000);
   
-  // Water Level: Range 15 to 120% (can go over 100% to simulate overflow)
-  waterLevel = random(15, 120);
+  // Water Level: Range 20 to 100L (spans across all conditions)
+  waterLevel = random(20, 100);
   
-  // Temperature: Range 18 to 38°C (realistic for growing environments)
-  temperature = random(180, 380) / 10.0;
+  // Temperature: Range 10 to 30°C (spans day/night conditions)
+  temperature = random(100, 300) / 10.0;
   
   // Print values to Serial for debugging
   Serial.print("pH: "); Serial.print(phValue);
   Serial.print(" | TDS: "); Serial.print(tdsValue);
   Serial.print(" | Water: "); Serial.print(waterLevel);
-  Serial.print("% | Temp: "); Serial.println(temperature);
+  Serial.print("L | Temp: "); Serial.println(temperature);
 }
 
 // Get the Touchscreen data
@@ -165,6 +165,7 @@ void setup() {
   
   Serial.println("AeroTech System Initialized");
   Serial.println("Sensor values will update every 2 seconds");
+  Serial.println("Optimized for efficient UI updates - no screen recreation!");
 }
 
 void loop() {
@@ -173,14 +174,10 @@ void loop() {
   if (currentTime - lastUpdateTime >= UPDATE_INTERVAL) {
     updateSensorValues();
     lastUpdateTime = currentTime;
-    
-    // Force screen refresh to show new values
-    // Reset the screen to update with new sensor values
-    extern bool Screen_MainMenu_INIT;
-    Screen_MainMenu_INIT = false;
+    // The Screen_MainMenu() function will handle efficient updates
   }
   
-  Screen_MainMenu();
+  Screen_MainMenu(); // This will now efficiently update existing elements
   lv_task_handler();  // let the GUI do its work
   lv_tick_inc(5);     // tell LVGL how much time has passed
   delay(5);           // let this time pass
