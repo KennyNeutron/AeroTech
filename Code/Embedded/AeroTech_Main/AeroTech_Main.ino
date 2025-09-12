@@ -48,6 +48,11 @@ uint8_t Time_HH = 10;
 uint8_t Time_MM = 0;
 uint8_t Time_SS = 0;
 
+uint8_t Date_Day = 1;
+uint8_t Date_Month = 1;
+uint16_t Date_Year = 2000;
+uint8_t Date_DoW = 1;
+
 // Custom Serial on GPIO22 (TX) and GPIO27 (RX)
 HardwareSerial CustomSerial(2);
 
@@ -171,6 +176,12 @@ void loop() {
         Time_HH = Data_AeroTech.AD_Time_HH;
         Time_MM = Data_AeroTech.AD_Time_MM;
         Time_SS = Data_AeroTech.AD_Time_SS;
+
+        Date_DoW = Data_AeroTech.AD_DayOfWeek;
+        Date_Day = Data_AeroTech.AD_Date_Day;
+        Date_Month = Data_AeroTech.AD_Date_Month;
+        Date_Year = Data_AeroTech.AD_Date_Year;
+
         phValue = Data_AeroTech.AD_pH;
         tdsValue = Data_AeroTech.AD_TDS;
         waterLevel = Data_AeroTech.AD_WaterLevel;

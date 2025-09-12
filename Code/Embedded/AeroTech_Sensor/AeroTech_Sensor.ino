@@ -4,6 +4,17 @@
 
 RTC_DS3231 RTC;
 
+//TDS
+#define TdsSensorPin A0
+// Constants
+const float VREF = 5.0;    // Reference voltage (Arduino Nano = 5V)
+const int SCOUNT = 30;     // Sample count for averaging
+int analogBuffer[SCOUNT];  // Buffer to store samples
+int analogBufferIndex = 0;
+float averageVoltage = 0;
+float tdsValue = 0;
+bool TDS_INIT = false;
+
 void setup() {
   Serial.begin(115200);
 
@@ -39,6 +50,7 @@ void setup() {
 void loop() {
 
   DateTime RTC_Now = RTC.now();
+  TDS_loop();
 
   // Extract time
   Data_AeroTech.AD_Time_HH = RTC_Now.hour();
@@ -46,13 +58,16 @@ void loop() {
   Data_AeroTech.AD_Time_SS = RTC_Now.second();
 
   // Extract date
-  uint8_t dow = RTC_Now.dayOfTheWeek();  // 0 = Sunday, 6 = Saturday
-  uint8_t day = RTC_Now.day();
-  uint8_t month = RTC_Now.month();
-  uint16_t year = RTC_Now.year();
+  Data_AeroTech.AD_DayOfWeek = RTC_Now.dayOfTheWeek();  // 0 = Sunday, 6 = Saturday
+  Data_AeroTech.AD_Date_Day = RTC_Now.day();
+  Data_AeroTech.AD_Date_Month = RTC_Now.month();
+  Data_AeroTech.AD_Date_Year = RTC_Now.year();
 
   // Temperature from DS3231
   Data_AeroTech.AD_Temperature = RTC.getTemperature();
+
+  //TDS Value from TDS Sensor
+  Data_AeroTech.AD_TDS = tdsValue;
 
 
   // Send marker + struct
@@ -67,6 +82,15 @@ void loop() {
   Serial.print(Data_AeroTech.AD_Time_MM);
   Serial.print(":");
   Serial.print(Data_AeroTech.AD_Time_SS);
+  Serial.print(" | Date: ");
+  Serial.print(Data_AeroTech.AD_Date_Year);
+  Serial.print("/");
+  Serial.print(Data_AeroTech.AD_Date_Month);
+  Serial.print("/");
+  Serial.print(Data_AeroTech.AD_Date_Day);
+  Serial.print(" | Day: ");
+  Serial.print(Data_AeroTech.AD_DayOfWeek);
+
   Serial.print(" | pH: ");
   Serial.print(Data_AeroTech.AD_pH);
   Serial.print(" | TDS: ");

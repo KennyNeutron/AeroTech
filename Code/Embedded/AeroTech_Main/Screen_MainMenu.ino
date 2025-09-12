@@ -20,6 +20,7 @@ lv_obj_t* temp_status_label;
 lv_obj_t* temp_panel;
 
 lv_obj_t* time_label;
+lv_obj_t* date_label;
 
 // Forward declaration of your custom create_label()
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color);
@@ -193,8 +194,13 @@ void updateSensorDisplays() {
 
   // Update time display
   char STR_Time[20];
-  snprintf(STR_Time, sizeof(STR_Time), "TIME: %02d:%02d:%02d", Time_HH, Time_MM, Time_SS);
+  snprintf(STR_Time, sizeof(STR_Time), "TIME: %02d:%02d", Time_HH, Time_MM);
   lv_label_set_text(time_label, STR_Time);
+
+  // Update date display
+  char STR_Date[30];
+  snprintf(STR_Date, sizeof(STR_Date), "DATE: %02d/%02d/%04d", Date_Month, Date_Day, Date_Year);
+  lv_label_set_text(date_label, STR_Date);
 }
 
 void Screen_MainMenu_PRE() {
@@ -212,11 +218,16 @@ void Screen_MainMenu_PRE() {
 
   // Format the time as string with clock symbol
   char STR_Time[20];
-  snprintf(STR_Time, sizeof(STR_Time), "TIME: %02d:%02d:%02d", Time_HH, Time_MM, Time_SS);
-
+  snprintf(STR_Time, sizeof(STR_Time), "TIME: %02d:%02d", Time_HH, Time_MM);
   // Time label - store reference for updates
-  time_label = create_label(SCR_MainMenu, STR_Time, &lv_font_montserrat_18, lv_color_white());
-  lv_obj_align(time_label, LV_ALIGN_TOP_LEFT, 0, 25);
+  time_label = create_label(SCR_MainMenu, STR_Time, &lv_font_montserrat_14, lv_color_white());
+  lv_obj_align(time_label, LV_ALIGN_TOP_LEFT, 0, 20);
+
+  char STR_Date[30];
+  snprintf(STR_Date, sizeof(STR_Date), "DATE: %02d/%02d/%04d", Date_Month, Date_Day, Date_Year);
+  // Date label - store reference for updates
+  date_label = create_label(SCR_MainMenu, STR_Date, &lv_font_montserrat_14, lv_color_white());
+  lv_obj_align(date_label, LV_ALIGN_TOP_LEFT, 0, 35);
 
   // Get initial status and colors for each sensor
   const char* phStatus;
