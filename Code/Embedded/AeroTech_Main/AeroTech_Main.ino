@@ -167,7 +167,7 @@ void loop() {
       Serial.println("A is peeked! Data_AeroTech is read");
 
       // Validate Header and Footer
-      if (Data_AeroTech.Header == 0xAA && Data_AeroTech.Footer == 0x55) {
+      if (Data_AeroTech.Header == 0x55 && Data_AeroTech.Footer == 0xAA) {
         Time_HH = Data_AeroTech.AD_Time_HH;
         Time_MM = Data_AeroTech.AD_Time_MM;
         Time_SS = Data_AeroTech.AD_Time_SS;
