@@ -14,14 +14,14 @@ export async function middleware(req: NextRequest) {
 
   const { pathname } = req.nextUrl;
 
-  // Smart redirect at "/"
+  // Redirect "/" to /login or /home depending on auth state
   if (pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = session ? "/home" : "/login";
     return NextResponse.redirect(url);
   }
 
-  // Gate protected routes
+  // Protect routes like /home if not signed in
   if (PROTECTED.some((p) => pathname.startsWith(p)) && !session) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
