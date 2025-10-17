@@ -129,6 +129,7 @@ function ParameterCard({
   rangeInfo,
 }: {
   title: string;
+  unit?: string;
   current: string;
   target: string;
   onDecrease: () => void;
