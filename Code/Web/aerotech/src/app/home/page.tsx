@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { createServer } from "@/lib/supabase/server";
 import LogoutButton from "@/components/LogoutButton";
 
