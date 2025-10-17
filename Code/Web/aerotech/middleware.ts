@@ -1,40 +1,37 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
-// Add protected route prefixes here:
-const PROTECTED_PREFIXES = ["/dashboard"];
+const PROTECTED = ["/dashboard", "/home"];
 
-export function middleware(req: NextRequest) {
-  const { pathname, searchParams } = req.nextUrl;
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const supabase = createMiddlewareClient({ req, res });
 
-  // 🔐 Replace with real auth check later (e.g., Supabase helpers).
-  // For Supabase Auth, presence of "sb-access-token" cookie implies a session.
-  const isLoggedIn = Boolean(req.cookies.get("sb-access-token")?.value);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  // Smart redirect for "/"
+  const { pathname } = req.nextUrl;
+
+  // Smart redirect at "/"
   if (pathname === "/") {
     const url = req.nextUrl.clone();
-    url.pathname = isLoggedIn ? "/dashboard" : "/login";
+    url.pathname = session ? "/home" : "/login";
     return NextResponse.redirect(url);
   }
 
-  // Protect certain routes
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
-  if (isProtected && !isLoggedIn) {
+  // Gate protected routes
+  if (PROTECTED.some((p) => pathname.startsWith(p)) && !session) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    // Optional: remember where to go after login
-    url.searchParams.set(
-      "redirectTo",
-      pathname + (searchParams?.toString() ? `?${searchParams}` : "")
-    );
+    url.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return res;
 }
 
-// Match "/" and any protected segments
 export const config = {
-  matcher: ["/", "/dashboard/:path*"],
+  matcher: ["/", "/home", "/dashboard/:path*"],
 };
