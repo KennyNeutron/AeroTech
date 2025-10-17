@@ -1,0 +1,13 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Soft circle -->
+  <circle cx="80" cy="80" r="76" fill="#ECFDF5"/>
+  <circle cx="80" cy="80" r="72" stroke="#10B981" stroke-width="4" fill="none" opacity="0.25"/>
+
+  <!-- Stylized A (aerodynamic / leaf-like) -->
+  <path d="M80 26L112 116H98.5L89 91H71L61.5 116H48L80 26Z" fill="#059669"/>
+  <path d="M72 84H88C94 84 100 79 100 72C100 61 92 54 80 54C68 54 60 61 60 72C60 79 66 84 72 84Z"
+        fill="#10B981" opacity="0.9"/>
+
+  <!-- subtle highlight -->
+  <path d="M80 26L88 48C79 50 71 56 68 65L61.5 116H48L80 26Z" fill="white" opacity="0.25"/>
+</svg>

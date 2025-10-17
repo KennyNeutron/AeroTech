@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Subtle green-tinted background */
+body {
+  @apply bg-brand-50/60;
+}
