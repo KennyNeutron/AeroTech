@@ -9,21 +9,23 @@ export default function SettingsPage() {
   // Target values (replace with Supabase values later)
   const [phTarget, setPhTarget] = useState(6.5);
   const [tdsTarget, setTdsTarget] = useState(800);
-  const [waterTarget, setWaterTarget] = useState(80);
+  const [waterTarget, setWaterTarget] = useState<"Low" | "Medium" | "High">(
+    "Medium"
+  );
   const [tempTarget, setTempTarget] = useState(24);
 
   // Mock current values
   const current = {
     ph: 11.3,
     tds: 1054.3,
-    water: 10.3,
+    water: "Low",
     temp: 15.6,
   };
 
   const resetDefaults = () => {
     setPhTarget(6.5);
     setTdsTarget(800);
-    setWaterTarget(80);
+    setWaterTarget("Medium");
     setTempTarget(24);
   };
 
@@ -54,45 +56,38 @@ export default function SettingsPage() {
           <ParameterCard
             title="pH Level"
             unit="pH"
-            current={current.ph}
-            target={phTarget}
-            min={4}
-            max={8}
-            step={0.1}
-            setTarget={setPhTarget}
+            current={`${current.ph.toFixed(1)} pH`}
+            target={`${phTarget.toFixed(1)} pH`}
+            onDecrease={() => setPhTarget(Math.max(phTarget - 0.1, 4))}
+            onIncrease={() => setPhTarget(Math.min(phTarget + 0.1, 8))}
+            rangeInfo="Min: 4 | Max: 8"
           />
 
           <ParameterCard
             title="TDS"
             unit="ppm"
-            current={current.tds}
-            target={tdsTarget}
-            min={0}
-            max={2000}
-            step={10}
-            setTarget={setTdsTarget}
+            current={`${current.tds.toFixed(1)} ppm`}
+            target={`${tdsTarget.toFixed(0)} ppm`}
+            onDecrease={() => setTdsTarget(Math.max(tdsTarget - 10, 0))}
+            onIncrease={() => setTdsTarget(Math.min(tdsTarget + 10, 2000))}
+            rangeInfo="Min: 0 | Max: 2000"
           />
 
-          <ParameterCard
+          <WaterLevelCard
             title="Water Level"
-            unit="%"
             current={current.water}
             target={waterTarget}
-            min={0}
-            max={100}
-            step={1}
             setTarget={setWaterTarget}
           />
 
           <ParameterCard
             title="Temperature"
             unit="°C"
-            current={current.temp}
-            target={tempTarget}
-            min={10}
-            max={35}
-            step={0.5}
-            setTarget={setTempTarget}
+            current={`${current.temp.toFixed(1)} °C`}
+            target={`${tempTarget.toFixed(1)} °C`}
+            onDecrease={() => setTempTarget(Math.max(tempTarget - 0.5, 10))}
+            onIncrease={() => setTempTarget(Math.min(tempTarget + 0.5, 35))}
+            rangeInfo="Min: 10 | Max: 35"
           />
         </div>
 
@@ -124,26 +119,21 @@ export default function SettingsPage() {
   );
 }
 
-/* -------- Subcomponents -------- */
-
+/* -------- ParameterCard -------- */
 function ParameterCard({
   title,
-  unit,
   current,
   target,
-  min,
-  max,
-  step,
-  setTarget,
+  onDecrease,
+  onIncrease,
+  rangeInfo,
 }: {
   title: string;
-  unit: string;
-  current: number;
-  target: number;
-  min: number;
-  max: number;
-  step: number;
-  setTarget: (v: number) => void;
+  current: string;
+  target: string;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  rangeInfo: string;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-brand-100 shadow-card p-5">
@@ -152,32 +142,28 @@ function ParameterCard({
       <div className="flex justify-between mb-3">
         <div>
           <p className="text-sm text-brand-800/70">Current</p>
-          <p className="text-lg font-medium text-brand-800">
-            {current.toFixed(1)} {unit}
-          </p>
+          <p className="text-lg font-medium text-brand-800">{current}</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-brand-800/70">Target</p>
-          <p className="text-lg font-medium text-brand-600">
-            {target.toFixed(1)} {unit}
-          </p>
+          <p className="text-lg font-medium text-brand-600">{target}</p>
         </div>
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <span className="text-sm text-brand-800/70">Set Target {unit}</span>
+        <span className="text-sm text-brand-800/70">Adjust Target</span>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setTarget(Math.max(target - step, min))}
+            onClick={onDecrease}
             className="bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-md w-7 h-7 flex items-center justify-center font-bold"
           >
             -
           </button>
           <div className="w-16 text-center border border-brand-200 rounded-md py-1 bg-brand-50 font-medium text-brand-800">
-            {target.toFixed(1)}
+            {target.split(" ")[0]}
           </div>
           <button
-            onClick={() => setTarget(Math.min(target + step, max))}
+            onClick={onIncrease}
             className="bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-md w-7 h-7 flex items-center justify-center font-bold"
           >
             +
@@ -186,8 +172,59 @@ function ParameterCard({
       </div>
 
       <div className="flex justify-between mt-3 text-xs text-brand-800/60">
-        <span>Min: {min}</span>
-        <span>Max: {max}</span>
+        <span>{rangeInfo}</span>
+      </div>
+    </div>
+  );
+}
+
+/* -------- WaterLevelCard (categorical) -------- */
+function WaterLevelCard({
+  title,
+  current,
+  target,
+  setTarget,
+}: {
+  title: string;
+  current: string;
+  target: "Low" | "Medium" | "High";
+  setTarget: (v: "Low" | "Medium" | "High") => void;
+}) {
+  const levels: ("Low" | "Medium" | "High")[] = ["Low", "Medium", "High"];
+
+  return (
+    <div className="bg-white rounded-2xl border border-brand-100 shadow-card p-5">
+      <h3 className="text-brand-800 font-semibold mb-4">{title}</h3>
+
+      <div className="flex justify-between mb-3">
+        <div>
+          <p className="text-sm text-brand-800/70">Current</p>
+          <p className="text-lg font-medium text-brand-800">{current}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-brand-800/70">Target</p>
+          <p className="text-lg font-medium text-brand-600">{target}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
+        <span className="text-sm text-brand-800/70">Set Target Level</span>
+        <div className="flex items-center gap-2">
+          {levels.map((level) => (
+            <button
+              key={level}
+              onClick={() => setTarget(level)}
+              className={`px-3 py-1 rounded-md text-sm font-medium border transition
+                ${
+                  target === level
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-brand-50 text-brand-800 border-brand-200 hover:bg-brand-100"
+                }`}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
