@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
-const PROTECTED = ["/dashboard", "/home"];
+const PROTECTED = [
+  "/home",
+  "/sensors",
+  "/actuators",
+  "/settings",
+  "/dashboard",
+];
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
@@ -14,14 +20,12 @@ export async function middleware(req: NextRequest) {
 
   const { pathname } = req.nextUrl;
 
-  // Redirect "/" to /login or /home depending on auth state
   if (pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = session ? "/home" : "/login";
     return NextResponse.redirect(url);
   }
 
-  // Protect routes like /home if not signed in
   if (PROTECTED.some((p) => pathname.startsWith(p)) && !session) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
@@ -33,5 +37,12 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/home", "/dashboard/:path*"],
+  matcher: [
+    "/",
+    "/home",
+    "/sensors",
+    "/actuators",
+    "/settings",
+    "/dashboard/:path*",
+  ],
 };
