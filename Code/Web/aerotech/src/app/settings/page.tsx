@@ -1,29 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import NavTabs from "@/components/NavTabs";
 import LogoutButton from "@/components/LogoutButton";
 import { createClient } from "@/lib/supabase/client";
 import { DEVICE_ID } from "@/lib/config";
-import { useRouter } from "next/navigation";
+
+/* ---------------- Types & helpers ---------------- */
 
 type WaterTarget = "Low" | "Medium" | "High";
 const toCode: Record<WaterTarget, number> = { Low: 0, Medium: 1, High: 2 };
 const fromCode = (n: number | null | undefined): WaterTarget =>
   n === 0 ? "Low" : n === 2 ? "High" : "Medium";
 
+/* ---------------- Page ---------------- */
+
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Targets (editable)
+  // Editable targets
   const [phTarget, setPhTarget] = useState(6.5);
   const [tdsTarget, setTdsTarget] = useState(800);
   const [waterTarget, setWaterTarget] = useState<WaterTarget>("Medium");
   const [tempTarget, setTempTarget] = useState(24);
 
-  // Current readings (read-only, latest)
+  // Last saved/loaded snapshot (for Discard)
+  const [initialTargets, setInitialTargets] = useState({
+    ph: 6.5,
+    tds: 800,
+    water: "Medium" as WaterTarget,
+    temp: 24,
+  });
+
+  // Current readings (display-only)
   const [current, setCurrent] = useState({
     ph: 0,
     tds: 0,
@@ -35,15 +47,22 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load current targets + latest reading
+  // Dirty state (enable/disable Save/Discard)
+  const isDirty =
+    phTarget !== initialTargets.ph ||
+    tdsTarget !== initialTargets.tds ||
+    tempTarget !== initialTargets.temp ||
+    waterTarget !== initialTargets.water;
+
+  // Load targets + latest readings from Supabase
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
     (async () => {
       setLoading(true);
       setError(null);
 
-      // 1) targets
+      // 1) Targets
       const { data: targets, error: tErr } = await supabase
         .from("system_targets")
         .select("ph_target, tds_target, temp_target, water_level_target")
@@ -53,20 +72,27 @@ export default function SettingsPage() {
       if (tErr) {
         setError(tErr.message);
       } else if (targets) {
-        isMounted && setPhTarget(Number(targets.ph_target ?? 6.5));
-        isMounted && setTdsTarget(Number(targets.tds_target ?? 800));
-        isMounted && setTempTarget(Number(targets.temp_target ?? 24));
-        isMounted &&
-          setWaterTarget(
-            fromCode(
-              typeof targets.water_level_target === "number"
-                ? targets.water_level_target
-                : null
-            )
-          );
+        const ph = Number(targets.ph_target ?? 6.5);
+        const tds = Number(targets.tds_target ?? 800);
+        const temp = Number(targets.temp_target ?? 24);
+        const water = fromCode(
+          typeof targets.water_level_target === "number"
+            ? targets.water_level_target
+            : null
+        );
+
+        if (mounted) {
+          setPhTarget(ph);
+          setTdsTarget(tds);
+          setTempTarget(temp);
+          setWaterTarget(water);
+
+          // snapshot for Discard
+          setInitialTargets({ ph, tds, temp, water });
+        }
       }
 
-      // 2) latest reading
+      // 2) Latest reading (optional)
       const { data: reading, error: rErr } = await supabase
         .from("sensor_readings")
         .select("ph, tds, temp_c, water_level_code, recorded_at")
@@ -75,27 +101,24 @@ export default function SettingsPage() {
         .limit(1)
         .maybeSingle();
 
-      if (rErr) {
-        setError((prev) => prev ?? rErr.message);
-      } else if (reading) {
-        isMounted &&
-          setCurrent({
-            ph: Number(reading.ph ?? 0),
-            tds: Number(reading.tds ?? 0),
-            temp: Number(reading.temp_c ?? 0),
-            water: fromCode(
-              typeof reading.water_level_code === "number"
-                ? reading.water_level_code
-                : null
-            ),
-          });
+      if (!rErr && reading && mounted) {
+        setCurrent({
+          ph: Number(reading.ph ?? 0),
+          tds: Number(reading.tds ?? 0),
+          temp: Number(reading.temp_c ?? 0),
+          water: fromCode(
+            typeof reading.water_level_code === "number"
+              ? reading.water_level_code
+              : null
+          ),
+        });
       }
 
-      isMounted && setLoading(false);
+      if (mounted) setLoading(false);
     })();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, [supabase]);
 
@@ -106,20 +129,27 @@ export default function SettingsPage() {
     setTempTarget(24);
   };
 
+  const discardChanges = () => {
+    setPhTarget(initialTargets.ph);
+    setTdsTarget(initialTargets.tds);
+    setTempTarget(initialTargets.temp);
+    setWaterTarget(initialTargets.water);
+  };
+
   const saveAll = async () => {
     setSaving(true);
     setError(null);
-    // Upsert a single row for the device
+
     const { error } = await supabase.from("system_targets").upsert(
       {
         device_id: DEVICE_ID,
         ph_target: phTarget,
         tds_target: tdsTarget,
         temp_target: tempTarget,
-        water_level_target: toCode[waterTarget], // int2 in DB
+        water_level_target: toCode[waterTarget],
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "device_id" }
+      { onConflict: "device_id" } // requires UNIQUE(device_id)
     );
 
     setSaving(false);
@@ -129,8 +159,16 @@ export default function SettingsPage() {
       return;
     }
 
-    // Refresh server-rendered pages (e.g., /sensors) so they reflect new targets
+    // Update the snapshot so Discard becomes disabled
+    setInitialTargets({
+      ph: phTarget,
+      tds: tdsTarget,
+      temp: tempTarget,
+      water: waterTarget,
+    });
+
     router.refresh();
+    // You can replace alert with a toast, if you have one
     alert("Settings saved!");
   };
 
@@ -162,8 +200,8 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Grid for parameters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-100">
+        {/* Grid of parameter cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <ParameterCard
             title="pH Level"
             unit="pH"
@@ -214,18 +252,18 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* Buttons row */}
+        {/* Action buttons */}
         <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
           <button
             className="bg-brand-700 hover:bg-brand-800 text-white font-medium px-6 py-3 rounded-lg flex items-center justify-center gap-2 shadow disabled:opacity-50"
             onClick={saveAll}
-            disabled={loading || saving}
+            disabled={loading || saving || !isDirty}
           >
             {saving ? "Saving..." : "💾 Save All Settings"}
           </button>
 
           <button
-            className="bg-white border border-brand-300 text-brand-800 font-medium px-6 py-3 rounded-lg hover:bg-brand-100 shadow-sm flex items-center justify-center gap-2"
+            className="bg-white border border-brand-300 text-brand-800 font-medium px-6 py-3 rounded-lg hover:bg-brand-100 shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
             onClick={resetDefaults}
             disabled={saving}
           >
@@ -233,8 +271,14 @@ export default function SettingsPage() {
           </button>
 
           <button
-            disabled
-            className="bg-gray-100 text-gray-400 font-medium px-6 py-3 rounded-lg shadow-sm cursor-not-allowed"
+            onClick={discardChanges}
+            disabled={!isDirty || saving || loading}
+            className={`px-6 py-3 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2
+              ${
+                !isDirty || saving || loading
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-white border border-brand-300 text-brand-800 hover:bg-brand-100"
+              }`}
           >
             🗑️ Discard Changes
           </button>
@@ -244,7 +288,8 @@ export default function SettingsPage() {
   );
 }
 
-/* -------- ParameterCard -------- */
+/* ---------------- Subcomponents ---------------- */
+
 function ParameterCard({
   title,
   unit,
@@ -313,7 +358,6 @@ function ParameterCard({
   );
 }
 
-/* -------- WaterLevelCard (categorical) -------- */
 function WaterLevelCard({
   title,
   current,
