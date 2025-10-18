@@ -1,11 +1,9 @@
 import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export const createServer = async () => {
-  const cookieStore = await cookies(); // Next.js 15: async cookies()
-
+// Return a function that returns the cookie store
+export const createServer = () => {
   return createServerComponentClient({
-    // MUST return a Promise
-    cookies: async () => cookieStore, // or: cookies: () => Promise.resolve(cookieStore)
+    cookies: () => cookies(), //  not `cookies`, not `await cookies()`
   });
 };
