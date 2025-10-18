@@ -2,11 +2,10 @@ import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export const createServer = async () => {
-  // Next.js 15: cookies() is async
-  const cookieStore = await cookies();
+  const cookieStore = await cookies(); // Next.js 15: async cookies()
 
-  // auth-helpers expects cookies: () => Promise<ReadonlyRequestCookies>
   return createServerComponentClient({
-    cookies: async () => cookieStore, // make it async
+    // MUST return a Promise
+    cookies: async () => cookieStore, // or: cookies: () => Promise.resolve(cookieStore)
   });
 };
