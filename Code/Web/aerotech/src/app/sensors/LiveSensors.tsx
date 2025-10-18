@@ -1,13 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { DEVICE_ID } from "@/lib/config";
 
-/* ---------------- Types & helpers ---------------- */
+/* ---------------- Types ---------------- */
 type WaterTarget = "Low" | "Medium" | "High";
-const fromCode = (n: number | null | undefined): WaterTarget =>
-  n === 0 ? "Low" : n === 2 ? "High" : "Medium";
+
+type ReadingRow = {
+  ph: number | null;
+  tds: number | null;
+  temp_c: number | null;
+  water_level_code: number | null;
+  recorded_at: string | null;
+  device_id?: string;
+};
+
+type TargetsRow = {
+  ph_target: number | null;
+  tds_target: number | null;
+  temp_target: number | null;
+  water_level_target: number | null;
+  device_id?: string;
+};
 
 type Reading = {
   ph: number;
@@ -24,8 +40,25 @@ type Targets = {
   water: WaterTarget;
 };
 
-function fmt(n?: number | null, digits = 1) {
-  return typeof n === "number" && !Number.isNaN(n) ? n.toFixed(digits) : "—";
+/* ---------------- Helpers ---------------- */
+const fromCode = (n: number | null | undefined): WaterTarget =>
+  n === 0 ? "Low" : n === 2 ? "High" : "Medium";
+
+const fmt = (n?: number | null, digits = 1) =>
+  typeof n === "number" && !Number.isNaN(n) ? n.toFixed(digits) : "—";
+
+/** Type guards to narrow payload.new/old */
+function isReadingRow(row: unknown): row is ReadingRow {
+  return (
+    !!row && typeof row === "object" && "ph" in (row as Record<string, unknown>)
+  );
+}
+function isTargetsRow(row: unknown): row is TargetsRow {
+  return (
+    !!row &&
+    typeof row === "object" &&
+    "ph_target" in (row as Record<string, unknown>)
+  );
 }
 
 /* ---------------- Component ---------------- */
@@ -42,7 +75,7 @@ export default function LiveSensors({
   const [targets, setTargets] = useState<Targets | null>(initialTargets);
 
   useEffect(() => {
-    // Subscribe to new sensor readings (INSERTs)
+    // Realtime: sensor_readings inserts
     const readingsChannel = supabase
       .channel("sensor_readings_live")
       .on(
@@ -53,8 +86,10 @@ export default function LiveSensors({
           table: "sensor_readings",
           filter: `device_id=eq.${DEVICE_ID}`,
         },
-        (payload) => {
-          const row: any = payload.new;
+        (payload: RealtimePostgresChangesPayload<ReadingRow>) => {
+          const row = payload.new;
+          if (!isReadingRow(row)) return;
+
           setReading({
             ph: Number(row.ph ?? NaN),
             tds: Number(row.tds ?? NaN),
@@ -66,7 +101,7 @@ export default function LiveSensors({
       )
       .subscribe();
 
-    // Subscribe to system target changes (INSERT/UPDATE)
+    // Realtime: system_targets upserts/updates
     const targetsChannel = supabase
       .channel("system_targets_live")
       .on(
@@ -77,14 +112,16 @@ export default function LiveSensors({
           table: "system_targets",
           filter: `device_id=eq.${DEVICE_ID}`,
         },
-        (payload) => {
-          const row: any = payload.new ?? payload.old;
+        (payload: RealtimePostgresChangesPayload<TargetsRow>) => {
+          const row = payload.new ?? payload.old;
+          if (!isTargetsRow(row)) return;
+
           setTargets({
-            ph: Number(row?.ph_target ?? 6.5),
-            tds: Number(row?.tds_target ?? 800),
-            temp: Number(row?.temp_target ?? 24),
+            ph: Number(row.ph_target ?? 6.5),
+            tds: Number(row.tds_target ?? 800),
+            temp: Number(row.temp_target ?? 24),
             water: fromCode(
-              typeof row?.water_level_target === "number"
+              typeof row.water_level_target === "number"
                 ? row.water_level_target
                 : null
             ),
@@ -173,7 +210,7 @@ export default function LiveSensors({
   );
 }
 
-/* ---------------- Presentational subcomponents ---------------- */
+/* ---------------- Presentational ---------------- */
 function MetricCard(props: {
   title: string;
   value: string | number;
