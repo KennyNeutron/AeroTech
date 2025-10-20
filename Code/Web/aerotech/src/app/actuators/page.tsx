@@ -24,6 +24,17 @@ function resolveActuatorCommandUrl() {
 
 const ACTUATOR_COMMAND_URL = resolveActuatorCommandUrl();
 
+/** Safely get an error message from unknown */
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 export default function ActuatorsPage() {
   const [pumpAutomatic, setPumpAutomatic] = useState(true);
   const [fanAutomatic, setFanAutomatic] = useState(false);
@@ -104,12 +115,12 @@ export default function ActuatorsPage() {
         throw new Error(message);
       }
 
-      // If you want to reflect DB truth, you can read it here:
-      // const result = await response.json();
-      // Optionally sync local UI with result.state.{mode_pump,mode_fan,pump_on,fan_on}
-    } catch (e: any) {
-      console.error("Failed to send command:", e?.message || e);
-      setError(e?.message || "Failed to send command.");
+      // Optional: const result = await response.json();
+      // You can sync local UI from result.state if desired.
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      console.error("Failed to send command:", msg);
+      setError(msg || "Failed to send command.");
     } finally {
       setLoading(false);
     }
