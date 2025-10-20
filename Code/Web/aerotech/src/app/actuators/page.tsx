@@ -6,33 +6,46 @@ import NavTabs from "@/components/NavTabs";
 
 /**
  * TODO (backend):
- * - On toggle, call a Supabase RPC / Edge Function to switch relays on the device.
- * - Optionally persist actuator state to a table like `actuator_states`.
+ * - On *any* toggle, call a Supabase RPC / Edge Function to switch the device state.
+ * - Logic must be: if Automatic is ON, manual is ignored. If Automatic is OFF, manual applies.
  */
 
 export default function ActuatorsPage() {
-  // Local UI state (replace with real state from DB/Realtime later)
-  const [pumpOn, setPumpOn] = useState(true);
-  const [fanOn, setFanOn] = useState(false);
-  const [timerMode, setTimerMode] = useState(false); // false=Manual, true=Timer
+  // State for AUTOMATIC MODE (true = control is automatic, false = control is manual)
+  const [pumpAutomatic, setPumpAutomatic] = useState(true);
+  const [fanAutomatic, setFanAutomatic] = useState(false);
 
-  // Derived summary: how many active systems?
+  // State for MANUAL OVERRIDE (only used when Automatic is false)
+  // This tracks the desired manual ON/OFF state.
+  const [pumpManualOn, setPumpManualOn] = useState(false);
+  const [fanManualOn, setFanManualOn] = useState(false);
+
+  // Derived summary: checks the currently active state (Automatic OR Manual)
+  // In a real app, 'true' here means the device is physically powered on.
+  const isPumpActive = pumpAutomatic ? true : pumpManualOn;
+  const isFanActive = fanAutomatic ? true : fanManualOn;
+
   const activeCount = useMemo(
-    () => Number(pumpOn) + Number(fanOn),
-    [pumpOn, fanOn]
+    () => Number(isPumpActive) + Number(isFanActive),
+    [isPumpActive, isFanActive]
   );
-  const systemStatus =
-    activeCount === 0 ? "Idle" : activeCount === 2 ? "All Running" : "Partial";
 
-  // Quick actions
+  const systemStatus =
+    activeCount === 0 ? "Idle" : activeCount === 2 ? "All Active" : "Partial";
+
+  // Quick actions: Now toggle/stop automatic modes
   const toggleAll = () => {
-    const allOn = pumpOn && fanOn;
-    setPumpOn(!allOn);
-    setFanOn(!allOn);
+    const allAutomatic = pumpAutomatic && fanAutomatic;
+    setPumpAutomatic(!allAutomatic);
+    setFanAutomatic(!allAutomatic);
   };
+
   const emergencyStop = () => {
-    setPumpOn(false);
-    setFanOn(false);
+    // Turning Automatic OFF and Manual OFF
+    setPumpAutomatic(false);
+    setFanAutomatic(false);
+    setPumpManualOn(false);
+    setFanManualOn(false);
   };
 
   return (
@@ -57,123 +70,134 @@ export default function ActuatorsPage() {
       {/* Actuator cards */}
       <section className="px-4 mt-6">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Water Pump Card */}
           <ActuatorCard
             title="Water Pump"
             icon="🚿"
-            powerLabel="Power"
-            on={pumpOn}
-            onToggle={() => setPumpOn((v) => !v)}
+            isAutomatic={pumpAutomatic}
+            onAutomaticToggle={() => setPumpAutomatic((v) => !v)}
+            isManualOn={pumpManualOn}
+            onManualToggle={() => setPumpManualOn((v) => !v)}
+            currentStatus={isPumpActive}
           />
+
+          {/* Ventilation Fan Card */}
           <ActuatorCard
             title="Ventilation Fan"
             icon="🪟"
-            powerLabel="Power"
-            on={fanOn}
-            onToggle={() => setFanOn((v) => !v)}
+            isAutomatic={fanAutomatic}
+            onAutomaticToggle={() => setFanAutomatic((v) => !v)}
+            isManualOn={fanManualOn}
+            onManualToggle={() => setFanManualOn((v) => !v)}
+            currentStatus={isFanActive}
           />
-        </div>
-      </section>
-
-      {/* Timer settings */}
-      <section className="px-4 mt-6">
-        <div className="max-w-5xl mx-auto bg-white rounded-2xl border border-brand-100 shadow-card p-5">
-          <div className="flex items-center justify-between">
-            <h3 className="text-brand-800 font-semibold">
-              Pump Timer Settings
-            </h3>
-            <Toggle checked={timerMode} onChange={setTimerMode} />
-          </div>
-
-          <div className="mt-5">
-            <div className="text-brand-800/70 text-sm flex items-center gap-2">
-              <span>⏱️ Timer Mode</span>
-            </div>
-
-            <div className="mt-3 rounded-xl bg-brand-50 border border-brand-100 p-4">
-              <div className="text-brand-800/70">Current Mode</div>
-              <div className="mt-1 font-semibold text-brand-800">
-                {timerMode ? "Timer Control" : "Manual Control"}
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* Quick actions */}
       <section className="px-4 mt-8 mb-16">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center text-brand-800/80 font-medium mb-3">
-            Quick Actions
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button
-              onClick={toggleAll}
-              className="rounded-xl border border-brand-200 bg-white text-brand-800 hover:bg-brand-100 py-3 font-medium shadow-sm"
-            >
-              ⏻ Toggle All Systems
-            </button>
-            <button
-              onClick={emergencyStop}
-              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white py-3 font-medium shadow-sm"
-            >
-              ⛔ Emergency Stop
-            </button>
-          </div>
+        <div className="max-w-5xl mx-auto flex gap-4">
+          <button
+            onClick={toggleAll}
+            className="flex-1 px-4 py-3 rounded-xl font-medium text-white bg-brand-600 hover:bg-brand-700 transition"
+          >
+            Toggle All Automatic Mode
+          </button>
+          <button
+            onClick={emergencyStop}
+            className="flex-1 px-4 py-3 rounded-xl font-medium text-white bg-red-600 hover:bg-red-700 transition"
+          >
+            Emergency Stop
+          </button>
         </div>
       </section>
     </main>
   );
 }
 
-/* ---------- components ---------- */
+// ---------------- Component Definitions ----------------
 
-function SummaryCard(props: {
+interface SummaryCardProps {
   title: string;
   value: string;
-  subtitle?: string;
-}) {
+  subtitle: string;
+}
+
+function SummaryCard(props: SummaryCardProps) {
   const { title, value, subtitle } = props;
   return (
     <div className="bg-white rounded-2xl border border-brand-100 shadow-card p-5">
       <div className="text-brand-800/70 text-sm">{title}</div>
-      <div className="text-3xl font-bold text-brand-700 mt-1">{value}</div>
-      {subtitle ? (
-        <div className="text-brand-800/60 mt-1">{subtitle}</div>
-      ) : null}
+      <div className="mt-2 font-bold text-3xl text-brand-700">{value}</div>
+      {subtitle && (
+        <div className="text-brand-800/70 text-sm mt-1">{subtitle}</div>
+      )}
     </div>
   );
 }
 
-function ActuatorCard(props: {
+interface ActuatorCardProps {
   title: string;
-  icon?: string;
-  powerLabel?: string;
-  on: boolean;
-  onToggle: () => void;
-}) {
-  const { title, icon, powerLabel = "Power", on, onToggle } = props;
+  icon: string;
+  isAutomatic: boolean;
+  onAutomaticToggle: () => void;
+  isManualOn: boolean;
+  onManualToggle: () => void;
+  currentStatus: boolean;
+}
+
+function ActuatorCard(props: ActuatorCardProps) {
+  const {
+    title,
+    icon,
+    isAutomatic,
+    onAutomaticToggle,
+    isManualOn,
+    onManualToggle,
+    currentStatus,
+  } = props;
 
   return (
     <div className="bg-white rounded-2xl border border-brand-100 shadow-card p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3">
+        {/* Row 1: Actuator Title */}
         <h3 className="text-brand-800 font-semibold flex items-center gap-2">
           {icon && <span className="text-lg">{icon}</span>}
           {title}
         </h3>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-brand-800/70">{powerLabel}</span>
-          <Toggle checked={on} onChange={onToggle} />
+
+        {/* Row 2: Automatic Control */}
+        <div className="flex items-center justify-between py-1 border-t border-b border-brand-100/70">
+          <span className="text-sm font-medium text-brand-800/90">
+            Automatic Control
+          </span>
+          <Toggle checked={isAutomatic} onChange={onAutomaticToggle} />
         </div>
+
+        {/* Row 3: Manual Control (CONDITIONAL) */}
+        {!isAutomatic && (
+          <div className="flex items-center justify-between py-1">
+            <span className="text-sm font-medium text-brand-800/90">
+              Manual Power
+            </span>
+            <Toggle
+              checked={isManualOn}
+              onChange={onManualToggle}
+              manualColor={true}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-5">
-        <div className="text-brand-800/70">Status</div>
+        <div className="text-brand-800/70">Current Mode / Status</div>
         <div
           className={`mt-1 font-semibold ${
-            on ? "text-emerald-600" : "text-brand-800/70"
+            currentStatus ? "text-emerald-600" : "text-brand-800/70"
           }`}
         >
-          {on ? "ON" : "OFF"}
+          {isAutomatic ? "AUTOMATIC" : "MANUAL"}
+          {!isAutomatic && `: ${isManualOn ? "ON" : "OFF"}`}
         </div>
       </div>
     </div>
@@ -183,21 +207,27 @@ function ActuatorCard(props: {
 function Toggle({
   checked,
   onChange,
+  manualColor = false,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
+  manualColor?: boolean;
 }) {
+  const baseColor = manualColor ? "bg-indigo-600" : "bg-emerald-600";
+  const bgColor = checked ? baseColor : "bg-gray-200";
+
   return (
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition
-        ${checked ? "bg-brand-600" : "bg-brand-200"}`}
-      aria-pressed={checked}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${bgColor}`}
     >
+      <span className="sr-only">Toggle switch</span>
       <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white transition
-          ${checked ? "translate-x-5" : "translate-x-1"}`}
+        aria-hidden="true"
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
       />
     </button>
   );
