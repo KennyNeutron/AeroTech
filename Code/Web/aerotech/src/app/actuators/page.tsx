@@ -1,16 +1,16 @@
 // src/app/actuators/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import NavTabs from "@/components/NavTabs";
 import { createClient } from "@/lib/supabase/client";
 import { DEVICE_ID } from "@/lib/config";
 
 /**
- * Resolve the Functions URL from NEXT_PUBLIC_SUPABASE_URL.
- * Local:  http://localhost:54321/functions/v1/report-actuator
- * Hosted: https://<ref>.functions.supabase.co/report-actuator
+ * Build the correct Functions URL from NEXT_PUBLIC_SUPABASE_URL.
+ * Local development: http://localhost:54321/functions/v1/report-actuator
+ * Hosted Supabase:   https://<ref>.functions.supabase.co/report-actuator
  */
 function resolveActuatorCommandUrl() {
   const base = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
@@ -24,7 +24,7 @@ function resolveActuatorCommandUrl() {
 
 const ACTUATOR_COMMAND_URL = resolveActuatorCommandUrl();
 
-/** Safely get an error message from unknown */
+/** Safely convert unknown error to a readable string */
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
@@ -35,25 +35,101 @@ function getErrorMessage(err: unknown): string {
   }
 }
 
+type ActuatorStateRow = {
+  pump_on: boolean | null;
+  fan_on: boolean | null;
+  mode_pump: string | null; // "auto" | "manual" | null
+  mode_fan: string | null; // "auto" | "manual" | null
+};
+
 export default function ActuatorsPage() {
+  const supabase = createClient();
+
+  // UI state
   const [pumpAutomatic, setPumpAutomatic] = useState(true);
   const [fanAutomatic, setFanAutomatic] = useState(false);
   const [pumpManualOn, setPumpManualOn] = useState(false);
   const [fanManualOn, setFanManualOn] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Derived state for the top summary
+  // Derived state for summary cards
   const isPumpActive = pumpAutomatic || pumpManualOn;
   const isFanActive = fanAutomatic || fanManualOn;
-
   const activeCount = useMemo(
     () => Number(isPumpActive) + Number(isFanActive),
     [isPumpActive, isFanActive]
   );
   const systemStatus =
     activeCount === 0 ? "Idle" : activeCount === 2 ? "All Active" : "Partial";
+
+  /**
+   * Load the current actuator_state row from Supabase on mount
+   * so the UI mirrors the true initial state.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitial() {
+      try {
+        setInitializing(true);
+        const { data, error: dbErr } = await supabase
+          .from("actuator_state")
+          .select("pump_on, fan_on, mode_pump, mode_fan")
+          .eq("device_id", DEVICE_ID)
+          .maybeSingle<ActuatorStateRow>();
+
+        if (cancelled) return;
+
+        if (!dbErr && data) {
+          setPumpAutomatic((data.mode_pump ?? "auto") === "auto");
+          setFanAutomatic((data.mode_fan ?? "auto") === "auto");
+          setPumpManualOn(Boolean(data.pump_on));
+          setFanManualOn(Boolean(data.fan_on));
+        }
+      } finally {
+        if (!cancelled) setInitializing(false);
+      }
+    }
+
+    loadInitial();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Optional realtime sync: updates UI whenever actuator_state is updated for this device.
+   */
+  useEffect(() => {
+    const channel = supabase
+      .channel("actuator_state_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "actuator_state",
+          filter: `device_id=eq.${DEVICE_ID}`,
+        },
+        (payload) => {
+          const d = payload.new as ActuatorStateRow;
+          setPumpAutomatic((d.mode_pump ?? "auto") === "auto");
+          setFanAutomatic((d.mode_fan ?? "auto") === "auto");
+          setPumpManualOn(Boolean(d.pump_on));
+          setFanManualOn(Boolean(d.fan_on));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function sendCommand(
     actuator: "pump" | "fan",
@@ -62,7 +138,6 @@ export default function ActuatorsPage() {
   ) {
     if (loading) return;
 
-    // Fail fast if DEVICE_ID is not set
     if (
       !DEVICE_ID ||
       typeof DEVICE_ID !== "string" ||
@@ -78,19 +153,20 @@ export default function ActuatorsPage() {
     setError(null);
 
     try {
-      // Auth for RLS
-      const supabase = createClient();
       const {
         data: { session },
         error: sessionError,
       } = await supabase.auth.getSession();
-      if (sessionError || !session) throw new Error("User not authenticated.");
 
-      // Map to function’s expected payload
+      if (sessionError || !session) {
+        throw new Error("User not authenticated.");
+      }
+
+      // Match the function's expected body: actuator, mode, manual_on
       const mode: "auto" | "manual" = is_automatic ? "auto" : "manual";
       const manual_on = Boolean(is_manual_on);
 
-      const response = await fetch(ACTUATOR_COMMAND_URL, {
+      const res = await fetch(ACTUATOR_COMMAND_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -104,29 +180,32 @@ export default function ActuatorsPage() {
         }),
       });
 
-      if (!response.ok) {
-        let message = `HTTP ${response.status}`;
+      if (!res.ok) {
+        let message = `HTTP ${res.status}`;
         try {
-          const j = await response.json();
+          const j = (await res.json()) as { error?: string };
           if (j?.error) message = j.error;
         } catch {
-          // ignore parse error
+          /* ignore parse error */
         }
         throw new Error(message);
       }
 
-      // Optional: const result = await response.json();
-      // You can sync local UI from result.state if desired.
+      // If you want to mirror DB response immediately, you can parse it here:
+      // const { state } = (await res.json()) as { state: ActuatorStateRow };
+      // setPumpAutomatic((state.mode_pump ?? "auto") === "auto");
+      // setFanAutomatic((state.mode_fan ?? "auto") === "auto");
+      // setPumpManualOn(Boolean(state.pump_on));
+      // setFanManualOn(Boolean(state.fan_on));
     } catch (err: unknown) {
       const msg = getErrorMessage(err);
-      console.error("Failed to send command:", msg);
       setError(msg || "Failed to send command.");
     } finally {
       setLoading(false);
     }
   }
 
-  // Keep your original UI behavior, only wiring changed to call the function with correct payload
+  // Toggling handlers keep your original UX but call the function with the correct payload
   const handleAutomaticToggle = (
     actuator: "pump" | "fan",
     currentValue: boolean
@@ -192,9 +271,9 @@ export default function ActuatorsPage() {
           Error: {error}
         </div>
       )}
-      {loading && (
+      {(loading || initializing) && (
         <div className="max-w-5xl mx-auto px-4 mt-4 text-brand-700 bg-brand-100 p-3 rounded-lg border border-brand-300">
-          Sending command...
+          {initializing ? "Loading state..." : "Sending command..."}
         </div>
       )}
 
@@ -221,7 +300,7 @@ export default function ActuatorsPage() {
             isManualOn={pumpManualOn}
             onManualToggle={() => handleManualToggle("pump", pumpManualOn)}
             currentStatus={isPumpActive}
-            disabled={loading}
+            disabled={loading || initializing}
           />
           <ActuatorCard
             title="Ventilation Fan"
@@ -231,7 +310,7 @@ export default function ActuatorsPage() {
             isManualOn={fanManualOn}
             onManualToggle={() => handleManualToggle("fan", fanManualOn)}
             currentStatus={isFanActive}
-            disabled={loading}
+            disabled={loading || initializing}
           />
         </div>
       </section>
@@ -240,14 +319,14 @@ export default function ActuatorsPage() {
         <div className="max-w-5xl mx-auto flex gap-4">
           <button
             onClick={toggleAll}
-            disabled={loading}
+            disabled={loading || initializing}
             className="flex-1 px-4 py-3 rounded-xl font-medium text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 transition"
           >
             Toggle All Automatic Mode
           </button>
           <button
             onClick={emergencyStop}
-            disabled={loading}
+            disabled={loading || initializing}
             className="flex-1 px-4 py-3 rounded-xl font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition"
           >
             Emergency Stop
