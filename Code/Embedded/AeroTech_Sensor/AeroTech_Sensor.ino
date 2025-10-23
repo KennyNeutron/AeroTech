@@ -1,11 +1,24 @@
 #include <Wire.h>
 #include "RTClib.h"
 #include "DataStructure.h"
+#include <ph4502c_sensor.h>
+
+//Water Level Sensor
+#define WaterLevel_Low 3
+#define WaterLevel_Mid 4
+#define WaterLevel_High 5
 
 RTC_DS3231 RTC;
 
 //TDS
 #define TdsSensorPin A0
+
+//PH
+#define PH4502C_PH_LEVEL_PIN A1
+#define PH4502C_TEMP_PIN A2
+
+PH4502C_Sensor ph4502(PH4502C_PH_LEVEL_PIN, PH4502C_TEMP_PIN);
+
 // Constants
 const float VREF = 5.0;    // Reference voltage (Arduino Nano = 5V)
 const int SCOUNT = 30;     // Sample count for averaging
@@ -42,9 +55,14 @@ void setup() {
   Data_AeroTech.AD_Time_SS = 0;
   Data_AeroTech.AD_pH = 6.8;
   Data_AeroTech.AD_TDS = 750.5;
-  Data_AeroTech.AD_WaterLevel = 42.7;
+  Data_AeroTech.AD_WaterLevel = 0;
   Data_AeroTech.AD_Temperature = 0.0;
   Data_AeroTech.Footer = 0xAA;  // Example footer
+
+  WaterLevelSensor_setup();
+
+  // Initialize the PH4502 instance
+  ph4502.init();
 }
 
 void loop() {
@@ -68,6 +86,12 @@ void loop() {
 
   //TDS Value from TDS Sensor
   Data_AeroTech.AD_TDS = tdsValue;
+
+  //pH Value from PH4502C Sensor
+  Data_AeroTech.AD_pH = ph4502.read_ph_level();
+
+  // Water Level from Water Level Sensor
+  Data_AeroTech.AD_WaterLevel = WaterLevelSensor_Level();
 
 
   // Send marker + struct
@@ -100,4 +124,7 @@ void loop() {
   Serial.print(" | Temp: ");
   Serial.println(Data_AeroTech.AD_Temperature);
   delay(3);
+
+  // WaterLevelSensor_Level();
+  delay(1000);
 }

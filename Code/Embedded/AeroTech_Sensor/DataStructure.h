@@ -1,18 +1,20 @@
 struct __attribute__((packed)) AeroTechData {
   uint8_t Header = 0x00;  // Header byte for packet validation
 
-  uint8_t AD_Time_HH = 0x00;     // Hours (0-23)
-  uint8_t AD_Time_MM = 0x00;     // Minutes (0-59)
-  uint8_t AD_Time_SS = 0x00;     // Seconds (0-59)
-  
+  uint8_t AD_Time_HH = 0x00;  // Hours (0-23)
+  uint8_t AD_Time_MM = 0x00;  // Minutes (0-59)
+  uint8_t AD_Time_SS = 0x00;  // Seconds (0-59)
+
   uint8_t AD_Date_Day = 0x00;    // Day (1-31)
   uint8_t AD_Date_Month = 0x00;  // Month (1-12)
   uint16_t AD_Date_Year = 0x00;  // Year
   uint8_t AD_DayOfWeek = 0x00;   // Day of the week
 
-  float AD_pH = 0.0;           // pH value (typically 0.0-14.0)
-  float AD_TDS = 0.0;          // TDS in ppm
-  float AD_WaterLevel = 0.0;   // Water level in liters
+  uint8_t AD_WaterLevel = 0x00;  // Water level (L, M, H)
+
+  float AD_pH = 0.0;   // pH value (typically 0.0-14.0)
+  float AD_TDS = 0.0;  // TDS in ppm
+
   float AD_Temperature = 0.0;  // Temperature in Celsius
 
   uint8_t Footer = 0x00;  // Footer byte for packet validation

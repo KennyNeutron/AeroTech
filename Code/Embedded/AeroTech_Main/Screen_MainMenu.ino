@@ -55,16 +55,23 @@ void getTDSStatus(float tds, const char** status, lv_color_t* color) {
 
 // Helper function to determine Water Level status and color
 void getWaterLevelStatus(float level, const char** status, lv_color_t* color) {
-  if (level >= 70) {
+  if(level == 4){
+    *status = "ERROR";
+    *color = lv_color_hex(0xFF4444);  // Red for error
+  }else if(level == 3){
     *status = "FULL";
     *color = lv_color_hex(0x4488FF);  // Blue for full
-  } else if (level >= 40 && level <= 69) {
+  }else if(level == 2){
+    *status = "HIGH";
+    *color = lv_color_hex(0x44AA44);  // Green for high
+  }else if(level == 1){
     *status = "MID";
-    *color = lv_color_hex(0x44AA44);  // Green for mid
-  } else {
+    *color = lv_color_hex(0xFF8844);  // Orange for mid
+  }else if(level == 0){
     *status = "LOW";
     *color = lv_color_hex(0xFF4444);  // Red for low
   }
+
 }
 
 // Helper function to determine Temperature status and color based on day/night

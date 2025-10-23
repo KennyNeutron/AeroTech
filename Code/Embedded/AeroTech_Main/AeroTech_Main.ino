@@ -39,7 +39,7 @@
 //AeroTech Variables
 float phValue = 0.0;
 float tdsValue = 0.0;
-float waterLevel = 0.0;
+uint8_t waterLevel = 0.0;
 float temperature = 0.0;
 
 bool isDayTime = true;  // Set to false for night mode
@@ -153,7 +153,7 @@ void setup() {
   lv_display_t* disp;
   // Initialize the TFT display using the TFT_eSPI library
   disp = lv_tft_espi_create(SCREEN_WIDTH, SCREEN_HEIGHT, draw_buf, sizeof(draw_buf));
-  lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_270);
+  lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_90);
 
   // Initialize an LVGL input device object (Touchscreen)
   lv_indev_t* indev = lv_indev_create();
