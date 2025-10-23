@@ -143,7 +143,7 @@ static lv_obj_t* SCR_MainMenu;
 void setup() {
   Serial.begin(115200);
   Serial.println("AeroTech System Starting...");
-  delay(3000);
+  // delay(3000);
 
   String LVGL_Arduino = String("LVGL Library Version: ") + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
 
@@ -178,8 +178,6 @@ void setup() {
   lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
   // Set the callback function to read Touchscreen input
   lv_indev_set_read_cb(indev, touchscreen_read);
-
-  ActuatorClient_setup();
 
   Serial.println("AeroTech System Initialized");
 }

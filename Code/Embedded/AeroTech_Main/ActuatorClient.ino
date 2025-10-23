@@ -30,11 +30,11 @@ const char* SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOi
 const char* DEVICE_ID = "70d605e9-677f-4484-89bb-59cf7d98ed78";
 
 // Relay pins
-const int PUMP_PIN = 35;
-const int FAN_PIN = 21;
+const int PUMP_PIN = 16;
+const int FAN_PIN = 17;
 
 // Push buttons (active LOW with internal pull-ups)
-const int PUMP_BTN = 18;
+const int PUMP_BTN = 4;
 const int FAN_BTN = 19;
 
 // Relay logic: set to true if HIGH energizes relay, false if LOW energizes
@@ -78,10 +78,12 @@ inline void relayWrite(int pin, bool on) {
 void setPump(bool on) {
   relayWrite(PUMP_PIN, on);
   pumpApplied = on;
+  AeroTech_PumpStatus = on;
 }
 void setFan(bool on) {
   relayWrite(FAN_PIN, on);
   fanApplied = on;
+  AeroTech_FanStatus = on;
 }
 
 void ensureWiFi() {
@@ -223,8 +225,6 @@ void fetchActuatorState() {
   AeroTech_PumpMode = (cloud.mode_pump == "auto") ? true : false;
   AeroTech_FanMode = (cloud.mode_fan == "auto") ? true : false;
 
-  AeroTech_PumpStatus = cloud.pump_on;
-  AeroTech_FanStatus = cloud.fan_on;
 }
 
 
@@ -340,11 +340,16 @@ void ActuatorClient_setup() {
   Serial.printf("ANON prefix: %.12s...\n", SUPABASE_ANON_KEY);
   Serial.printf("DEVICE_ID: %s\n", DEVICE_ID);
 
-  ensureWiFi();
+  // ensureWiFi();
   fetchActuatorState();  // initial pull
 }
 
+bool ActuatorClient_INIT = false;
 void ActuatorClient_loop() {
+  if(!ActuatorClient_INIT) {
+    ActuatorClient_INIT = true;
+    ActuatorClient_setup();
+  }
   static uint32_t lastPoll = 0;
   const uint32_t now = millis();
 
