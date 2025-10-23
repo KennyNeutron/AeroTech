@@ -29,17 +29,22 @@
  *   - Optimized for real-time performance and 
  *     resource efficiency on the ESP32 platform.
  *******************************************************/
-
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include <lvgl.h>
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 #include "DataStructure.h"
 // #include "font_Font90Icon_48_1bpp.c"
 
+bool AeroTech_WifiStatus = false;
+
 //AeroTech Variables
 float phValue = 0.0;
 float tdsValue = 0.0;
-uint8_t waterLevel = 0.0;
+uint8_t waterLevel = 0;
 float temperature = 0.0;
 
 bool isDayTime = true;  // Set to false for night mode
@@ -53,10 +58,19 @@ uint8_t Date_Month = 1;
 uint16_t Date_Year = 2000;
 uint8_t Date_DoW = 1;
 
+bool AeroTech_PumpMode = false;  // false = Manual, true = Auto
+bool AeroTech_FanMode = false;   // false = Manual, true = Auto
+
+bool AeroTech_PumpStatus = false;
+bool AeroTech_FanStatus = false;
+
+bool AeroTech_SupabaseStatus = false;
+
 // Custom Serial on GPIO22 (TX) and GPIO27 (RX)
 HardwareSerial CustomSerial(2);
 
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color);
+
 
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color) {
   lv_obj_t* label = lv_label_create(parent);
@@ -127,8 +141,12 @@ lv_obj_t* SCR_CurrentScreen;
 static lv_obj_t* SCR_MainMenu;
 
 void setup() {
-  String LVGL_Arduino = String("LVGL Library Version: ") + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
   Serial.begin(115200);
+  Serial.println("AeroTech System Starting...");
+  delay(3000);
+
+  String LVGL_Arduino = String("LVGL Library Version: ") + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
+
   Serial.println(LVGL_Arduino);
 
   // Initialize custom serial on GPIO22 (TX) and GPIO27 (RX)
@@ -161,15 +179,25 @@ void setup() {
   // Set the callback function to read Touchscreen input
   lv_indev_set_read_cb(indev, touchscreen_read);
 
+  ActuatorClient_setup();
+
   Serial.println("AeroTech System Initialized");
 }
 
+bool DebugSensorData = false;
+
 void loop() {
   if (CustomSerial.available() > 0) {
-    Serial.println("Data is Available!");
+    if (DebugSensorData) {
+      Serial.println("Data is Available!");
+    }
+
     if (CustomSerial.read() == 'A' && CustomSerial.available() >= sizeof(AeroTechData)) {
       CustomSerial.readBytes((uint8_t*)&Data_AeroTech, sizeof(AeroTechData));
-      Serial.println("A is peeked! Data_AeroTech is read");
+
+      if (DebugSensorData) {
+        Serial.println("A is peeked! Data_AeroTech is read");
+      }
 
       // Validate Header and Footer
       if (Data_AeroTech.Header == 0x55 && Data_AeroTech.Footer == 0xAA) {
@@ -187,23 +215,31 @@ void loop() {
         waterLevel = Data_AeroTech.AD_WaterLevel;
         temperature = Data_AeroTech.AD_Temperature;
 
-        // Print received data for debugging
-        Serial.print("Data received - Time: ");
-        Serial.print(Time_HH);
-        Serial.print(":");
-        Serial.print(Time_MM);
-        Serial.print(":");
-        Serial.print(Time_SS);
-        Serial.print(" | pH: ");
-        Serial.print(phValue);
-        Serial.print(" | TDS: ");
-        Serial.print(tdsValue);
-        Serial.print(" | Water: ");
-        Serial.print(waterLevel);
-        Serial.print("L | Temp: ");
-        Serial.println(temperature);
+        if (DebugSensorData) {
+          Serial.println("Header and Footer are valid!");
+          // Print received data for debugging
+          Serial.print("Data received - Time: ");
+          Serial.print(Time_HH);
+          Serial.print(":");
+          Serial.print(Time_MM);
+          Serial.print(":");
+          Serial.print(Time_SS);
+          Serial.print(" | pH: ");
+          Serial.print(phValue);
+          Serial.print(" | TDS: ");
+          Serial.print(tdsValue);
+          Serial.print(" | Water: ");
+          Serial.print(waterLevel);
+          Serial.print("L | Temp: ");
+          Serial.println(temperature);
+        }
+
+        Serial.println("Valid packet received and processed.");
+
       } else {
-        Serial.println("Invalid packet - Header/Footer mismatch");
+        if (DebugSensorData) {
+          Serial.println("Invalid packet - Header/Footer mismatch");
+        }
       }
     }
   }
@@ -211,5 +247,6 @@ void loop() {
   Screen_MainMenu();  // This will now efficiently update existing elements
   lv_task_handler();  // let the GUI do its work
   lv_tick_inc(5);     // tell LVGL how much time has passed
-  delay(5);           // let this time pass
+
+  ActuatorClient_loop();
 }

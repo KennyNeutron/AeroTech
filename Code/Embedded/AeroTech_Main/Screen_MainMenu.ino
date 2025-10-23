@@ -22,6 +22,18 @@ lv_obj_t* temp_panel;
 lv_obj_t* time_label;
 lv_obj_t* date_label;
 
+lv_obj_t* Icon_WIFI_Label;
+lv_color_t Icon_WIFI_Color;
+
+lv_obj_t* PumpMode_Label;
+lv_obj_t* FanMode_Label;
+
+lv_obj_t* FanStatus_Label;
+lv_obj_t* PumpStatus_Label;
+
+lv_obj_t* SupabaseFetch_Label;
+lv_color_t SupabaseFetch_Color;
+
 // Forward declaration of your custom create_label()
 lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color);
 
@@ -55,23 +67,22 @@ void getTDSStatus(float tds, const char** status, lv_color_t* color) {
 
 // Helper function to determine Water Level status and color
 void getWaterLevelStatus(float level, const char** status, lv_color_t* color) {
-  if(level == 4){
+  if (level == 4) {
     *status = "ERROR";
     *color = lv_color_hex(0xFF4444);  // Red for error
-  }else if(level == 3){
+  } else if (level == 3) {
     *status = "FULL";
     *color = lv_color_hex(0x4488FF);  // Blue for full
-  }else if(level == 2){
+  } else if (level == 2) {
     *status = "HIGH";
     *color = lv_color_hex(0x44AA44);  // Green for high
-  }else if(level == 1){
+  } else if (level == 1) {
     *status = "MID";
     *color = lv_color_hex(0xFF8844);  // Orange for mid
-  }else if(level == 0){
+  } else if (level == 0) {
     *status = "LOW";
     *color = lv_color_hex(0xFF4444);  // Red for low
   }
-
 }
 
 // Helper function to determine Temperature status and color based on day/night
@@ -183,7 +194,8 @@ void updateSensorDisplays() {
 
   // Update Water Level panel
   char water_buf[16];
-  snprintf(water_buf, sizeof(water_buf), "%.1f", waterLevel);
+  float water_level_float = static_cast<float>(waterLevel);
+  snprintf(water_buf, sizeof(water_buf), "%.1f", water_level_float);
   lv_label_set_text(water_value_label, water_buf);
   lv_obj_set_style_text_color(water_value_label, waterColor, 0);
   lv_label_set_text(water_status_label, waterStatus);
@@ -199,6 +211,7 @@ void updateSensorDisplays() {
   lv_obj_set_style_text_color(temp_status_label, tempColor, 0);
   lv_obj_set_style_border_color(temp_panel, tempColor, 0);
 
+
   // Update time display
   char STR_Time[20];
   snprintf(STR_Time, sizeof(STR_Time), "TIME: %02d:%02d", Time_HH, Time_MM);
@@ -208,6 +221,33 @@ void updateSensorDisplays() {
   char STR_Date[30];
   snprintf(STR_Date, sizeof(STR_Date), "DATE: %02d/%02d/%04d", Date_Month, Date_Day, Date_Year);
   lv_label_set_text(date_label, STR_Date);
+
+
+  // Update Pump Mode display
+  char STR_PumpMode[20];
+  snprintf(STR_PumpMode, sizeof(STR_PumpMode), "PumpM: %s", AeroTech_PumpMode ? "A" : "M");
+  lv_label_set_text(PumpMode_Label, STR_PumpMode);
+
+  // Update Fan Mode display
+  char STR_FanMode[20];
+  snprintf(STR_FanMode, sizeof(STR_FanMode), "FanM: %s", AeroTech_FanMode ? "A" : "M");
+  lv_label_set_text(FanMode_Label, STR_FanMode);
+
+  // Update Pump Status display
+  char STR_PumpStatus[20];
+  snprintf(STR_PumpStatus, sizeof(STR_PumpStatus), "Pump: %s", AeroTech_PumpStatus ? "ON" : "OFF");
+  lv_label_set_text(PumpStatus_Label, STR_PumpStatus);
+
+  // Update Fan Status display
+  char STR_FanStatus[20];
+  snprintf(STR_FanStatus, sizeof(STR_FanStatus), "Fan: %s", AeroTech_FanStatus ? "ON" : "OFF");
+  lv_label_set_text(FanStatus_Label, STR_FanStatus);
+
+  // Update WiFi Icon Color
+  lv_obj_set_style_text_color(Icon_WIFI_Label, AeroTech_WifiStatus ? lv_color_hex(0x00FF00) : lv_color_hex(0xFF0000), LV_PART_MAIN);
+
+  // Update SupabaseFetch_Color
+  lv_obj_set_style_text_color(SupabaseFetch_Label, AeroTech_SupabaseStatus ? lv_color_hex(0x00FF00) : lv_color_hex(0xFF0000), LV_PART_MAIN);
 }
 
 void Screen_MainMenu_PRE() {
@@ -223,6 +263,14 @@ void Screen_MainMenu_PRE() {
                                         &lv_font_montserrat_14, lv_color_white());
   lv_obj_align(Screen_Title, LV_ALIGN_TOP_MID, 0, 0);
 
+  Icon_WIFI_Color = AeroTech_WifiStatus ? lv_color_hex(0x00FF00) : lv_color_hex(0xFF0000);
+  Icon_WIFI_Label = create_label(SCR_MainMenu, LV_SYMBOL_WIFI, &lv_font_montserrat_12, Icon_WIFI_Color);
+  lv_obj_align(Icon_WIFI_Label, LV_ALIGN_TOP_RIGHT, -3, 0);
+
+  SupabaseFetch_Color = AeroTech_SupabaseStatus ? lv_color_hex(0x00FF00) : lv_color_hex(0xFF0000);
+  SupabaseFetch_Label = create_label(SCR_MainMenu, LV_SYMBOL_DOWNLOAD, &lv_font_montserrat_12, SupabaseFetch_Color);
+  lv_obj_align(SupabaseFetch_Label, LV_ALIGN_TOP_LEFT, 0, 0);
+
   // Format the time as string with clock symbol
   char STR_Time[20];
   snprintf(STR_Time, sizeof(STR_Time), "TIME: %02d:%02d", Time_HH, Time_MM);
@@ -235,6 +283,28 @@ void Screen_MainMenu_PRE() {
   // Date label - store reference for updates
   date_label = create_label(SCR_MainMenu, STR_Date, &lv_font_montserrat_14, lv_color_white());
   lv_obj_align(date_label, LV_ALIGN_TOP_LEFT, 0, 35);
+
+
+  char STR_PumpMode[20];
+  snprintf(STR_PumpMode, sizeof(STR_PumpMode), "PumpM: %s", AeroTech_PumpMode ? "A" : "M");
+  PumpMode_Label = create_label(SCR_MainMenu, STR_PumpMode, &lv_font_montserrat_14, lv_color_white());
+  lv_obj_align(PumpMode_Label, LV_ALIGN_TOP_LEFT, 150, 20);
+
+  char STR_FanMode[20];
+  snprintf(STR_FanMode, sizeof(STR_FanMode), "FanM: %s", AeroTech_FanMode ? "A" : "M");
+  FanMode_Label = create_label(SCR_MainMenu, STR_FanMode, &lv_font_montserrat_14, lv_color_white());
+  lv_obj_align(FanMode_Label, LV_ALIGN_TOP_LEFT, 250, 20);
+
+  char STR_PumpStatus[20];
+  snprintf(STR_PumpStatus, sizeof(STR_PumpStatus), "Pump: %s", AeroTech_PumpStatus ? "ON" : "OFF");
+  PumpStatus_Label = create_label(SCR_MainMenu, STR_PumpStatus, &lv_font_montserrat_14, lv_color_white());
+  lv_obj_align(PumpStatus_Label, LV_ALIGN_TOP_LEFT, 150, 35);
+
+  char STR_FanStatus[20];
+  snprintf(STR_FanStatus, sizeof(STR_FanStatus), "Fan: %s", AeroTech_FanStatus ? "ON" : "OFF");
+  FanStatus_Label = create_label(SCR_MainMenu, STR_FanStatus, &lv_font_montserrat_14, lv_color_white());
+  lv_obj_align(FanStatus_Label, LV_ALIGN_TOP_LEFT, 250, 35);
+
 
   // Get initial status and colors for each sensor
   const char* phStatus;
@@ -263,7 +333,7 @@ void Screen_MainMenu_PRE() {
                               tdsStatus, tdsColor, 170, 55, &tds_panel, &tds_value_label, &tds_status_label);
 
   // Water Level Panel (bottom-left)
-  create_data_panel_with_refs(SCR_MainMenu, LV_SYMBOL_BATTERY_3, "Water Level", "L", waterLevel,
+  create_data_panel_with_refs(SCR_MainMenu, LV_SYMBOL_BATTERY_3, "Water Level", " ", waterLevel,
                               waterStatus, waterColor, 20, 145, &water_panel, &water_value_label, &water_status_label);
 
   // Temperature Panel (bottom-right)
@@ -272,6 +342,7 @@ void Screen_MainMenu_PRE() {
 }
 
 void Screen_MainMenu() {
+  Serial.println("Screen_MainMenu called");
   if (!Screen_MainMenu_INIT) {
     Screen_MainMenu_INIT = true;
     Screen_MainMenu_PRE();
