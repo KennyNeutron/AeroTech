@@ -342,7 +342,7 @@ void Screen_MainMenu_PRE() {
 }
 
 void Screen_MainMenu() {
-  Serial.println("Screen_MainMenu called");
+  // Serial.println("Screen_MainMenu called");
   if (!Screen_MainMenu_INIT) {
     Screen_MainMenu_INIT = true;
     Screen_MainMenu_PRE();

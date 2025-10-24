@@ -23,7 +23,7 @@
 
 // ===================== USER CONFIG FROM YOUR SKETCH =====================
 // Keep these exactly as you have them in your file.
-#define WIFI_SSID       "ProfTech-WiFi2.4G"
+#define WIFI_SSID       "Kenny Walter-2.4G"
 #define WIFI_PASSWORD   "PROFTECH"
 
 // Supabase project ref (slug) and anon key
@@ -41,7 +41,7 @@ const int PUMP_BTN = 14;
 const int FAN_BTN  = 12;
 
 // Relay logic: set to true if HIGH energizes relay, false if LOW energizes
-const bool RELAY_ACTIVE_HIGH = false;
+const bool RELAY_ACTIVE_HIGH = true;
 
 // Poll interval (ms) for pulling actuator_state
 const uint32_t POLL_INTERVAL_MS = 5000;
@@ -82,26 +82,15 @@ void setPump(bool on) { relayWrite(PUMP_PIN, on); pumpApplied = on; }
 void setFan(bool on)  { relayWrite(FAN_PIN,  on); fanApplied  = on; }
 
 void ensureWiFi() {
-  // if (WiFi.status() == WL_CONNECTED) return;
+  if (WiFi.status() == WL_CONNECTED) return;
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.printf("Connecting WiFi");
-  uint8_t WifiConnectTries = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
-    WifiConnectTries++;
-    if(WifiConnectTries >= 6) { //After 10 seconds of trying to connect, break out of the loop
-      break;
-    }
   }
   Serial.printf("\nConnected! IP: %s\n", WiFi.localIP().toString().c_str());
-
-  if(WiFi.status() == WL_CONNECTED) {
-    AeroTech_WifiStatus = true;
-  }else {
-    AeroTech_WifiStatus = false;
-  }
 }
 
 // ------------------------ HTTP helpers ------------------------

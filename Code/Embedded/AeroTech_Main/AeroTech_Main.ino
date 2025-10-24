@@ -37,6 +37,7 @@
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 #include "DataStructure.h"
+#include <time.h>
 // #include "font_Font90Icon_48_1bpp.c"
 
 bool AeroTech_WifiStatus = false;
@@ -153,7 +154,7 @@ void setup() {
   CustomSerial.begin(115200, SERIAL_8N1, 22, 27);
 
   // Initialize random seed
-  randomSeed(analogRead(0));
+  // randomSeed(analogRead(0));
 
   // Start LVGL
   lv_init();
@@ -247,4 +248,7 @@ void loop() {
   lv_tick_inc(5);     // tell LVGL how much time has passed
 
   ActuatorClient_loop();
+  Supabase_loop();
+  
+  
 }

@@ -20,8 +20,8 @@
 
 // ===================== USER CONFIG FROM YOUR SKETCH =====================
 // Keep these exactly as you have them in your file.
-#define WIFI_SSID "Kenny Walter-2.4G"
-#define WIFI_PASSWORD "PROFTECH"
+#define WIFI_SSID "WirelessNet"
+#define WIFI_PASSWORD "jhann&josh"
 
 // Supabase project ref (slug) and anon key
 #define SUPABASE_REF "njjxedmjqlkeoicckvwv"
@@ -38,7 +38,7 @@ const int PUMP_BTN = 4;
 const int FAN_BTN = 19;
 
 // Relay logic: set to true if HIGH energizes relay, false if LOW energizes
-const bool RELAY_ACTIVE_HIGH = false;
+const bool RELAY_ACTIVE_HIGH = true;
 
 // Poll interval (ms) for pulling actuator_state
 const uint32_t POLL_INTERVAL_MS = 5000;
@@ -76,9 +76,25 @@ inline void relayWrite(int pin, bool on) {
 }
 
 void setPump(bool on) {
-  relayWrite(PUMP_PIN, on);
-  pumpApplied = on;
-  AeroTech_PumpStatus = on;
+  if (!AeroTech_PumpMode) {
+    relayWrite(PUMP_PIN, on);
+    pumpApplied = on;
+    AeroTech_PumpStatus = on;
+  } else {
+    //Night Time Auto Mode Logic
+    if ((Time_HH >= 18 || Time_HH < 6) && Time_MM % 10 == 0 && Time_SS < 8) {
+      relayWrite(PUMP_PIN, true);
+    } else {
+      relayWrite(PUMP_PIN, false);
+    }
+
+    //Day Time Auto Mode Logic
+    if((Time_HH >= 6 && Time_HH < 18) && Time_MM % 5 == 0 && Time_SS < 10) {
+      relayWrite(PUMP_PIN, true);
+    } else {
+      relayWrite(PUMP_PIN, false);
+    }
+  }
 }
 void setFan(bool on) {
   relayWrite(FAN_PIN, on);
@@ -224,7 +240,6 @@ void fetchActuatorState() {
 
   AeroTech_PumpMode = (cloud.mode_pump == "auto") ? true : false;
   AeroTech_FanMode = (cloud.mode_fan == "auto") ? true : false;
-
 }
 
 
@@ -346,7 +361,7 @@ void ActuatorClient_setup() {
 
 bool ActuatorClient_INIT = false;
 void ActuatorClient_loop() {
-  if(!ActuatorClient_INIT) {
+  if (!ActuatorClient_INIT) {
     ActuatorClient_INIT = true;
     ActuatorClient_setup();
   }
