@@ -251,12 +251,19 @@ void updateSensorDisplays() {
 }
 
 void Screen_MainMenu_PRE() {
+
+  if (SCR_CurrentScreen != NULL) {
+    lv_obj_del(SCR_CurrentScreen);
+  }
+
   SCR_MainMenu = lv_obj_create(NULL);
   lv_scr_load(SCR_MainMenu);
 
   // Keep dark background
   lv_obj_set_style_bg_color(SCR_MainMenu, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(SCR_MainMenu, LV_OPA_COVER, 0);
+
+  SCR_CurrentScreen = SCR_MainMenu;
 
   // Screen title with symbol
   lv_obj_t* Screen_Title = create_label(SCR_MainMenu, LV_SYMBOL_SETTINGS " AEROTECH - Aerophonics Control",
@@ -350,6 +357,9 @@ void Screen_MainMenu() {
     // If screen is already initialized, just update the values efficiently
     updateSensorDisplays();
   }
+
+  ActuatorClient_loop();
+  Supabase_loop();
 }
 
 void Screen_MainMenu_POST() {

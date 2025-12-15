@@ -137,9 +137,10 @@ void touchscreen_read(lv_indev_t* indev, lv_indev_data_t* data) {
 }
 
 //LV Screens
-uint16_t CurrentScreenID = 0x0000;
+uint16_t CurrentScreenID = 0x0001;
 lv_obj_t* SCR_CurrentScreen;
 static lv_obj_t* SCR_MainMenu;
+static lv_obj_t* SCR_WiFiMenu;
 
 void setup() {
   Serial.begin(115200);
@@ -181,11 +182,26 @@ void setup() {
   lv_indev_set_read_cb(indev, touchscreen_read);
 
   Serial.println("AeroTech System Initialized");
+  SCR_CurrentScreen = SCR_MainMenu;
 }
 
 bool DebugSensorData = false;
 
 void loop() {
+
+
+  if (CurrentScreenID == 0x0000) {
+    SerialCOM();
+    Screen_MainMenu();  // This will now efficiently update existing elements
+  }else if(CurrentScreenID == 0x0001){
+    Screen_WiFiMenu();  // This will now efficiently update existing elements
+  }
+
+  lv_task_handler();  // let the GUI do its work
+  lv_tick_inc(5);     // tell LVGL how much time has passed
+}
+
+void SerialCOM() {
   if (CustomSerial.available() > 0) {
     if (DebugSensorData) {
       Serial.println("Data is Available!");
@@ -242,13 +258,4 @@ void loop() {
       }
     }
   }
-
-  Screen_MainMenu();  // This will now efficiently update existing elements
-  lv_task_handler();  // let the GUI do its work
-  lv_tick_inc(5);     // tell LVGL how much time has passed
-
-  ActuatorClient_loop();
-  Supabase_loop();
-  
-  
 }
