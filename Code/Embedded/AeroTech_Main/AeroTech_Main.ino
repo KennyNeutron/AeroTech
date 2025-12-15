@@ -198,7 +198,16 @@ void loop() {
   }
 
   lv_task_handler();  // let the GUI do its work
-  lv_tick_inc(5);     // tell LVGL how much time has passed
+  
+  // Update LVGL tick
+  static uint32_t last_tick = 0;
+  uint32_t now = millis();
+  if (now > last_tick) {
+    lv_tick_inc(now - last_tick);
+    last_tick = now;
+  }
+  
+  delay(5); // Yield to other tasks (Watchdog)
 }
 
 void SerialCOM() {
