@@ -6,44 +6,51 @@ AeroTech is an automated, sensor-driven aeroponics system designed to enhance ve
 
 ## Features
 
-- Sensor Monitoring: Real-time tracking of:
+- **Sensor Monitoring**: Real-time tracking of:
 
   - pH Level
   - Total Dissolved Solids (TDS)
   - Water Level
   - Temperature
 
-- Automation:
+- **Automation**:
 
   - Microcontroller-controlled pumps and fans
   - Adaptive environmental regulation based on sensor data
+  - Touchscreen Interface (LVGL)
 
-- Remote Access & Alerts:
+- **Remote Access & Alerts**:
 
-  - SMS notifications for anomalies (e.g., pump failure, pH imbalance)
-  - Cloud dashboard for live data logging, visualization, and historical analytics
+  - Cloud Dashboard for live data logging and analytics
+  - Real-time monitoring via Web Application
 
-- Sustainable Power:
-
+- **Sustainable Power**:
   - Solar energy integration with battery backup
   - Optimized for energy efficiency in remote or off-grid locations
-
-- Performance Assessment:
-  - Compared against traditional soil-based farming in terms of:
-    - Resource efficiency
-    - Growth rate
-    - Nutrient usage
 
 ---
 
 ## Tech Stack
 
-- Hardware: Microcontroller (e.g., ESP32/Arduino), sensors (pH, TDS, water level, temp), pumps, fans
-- Power: Solar panel with battery backup
-- Software:
-  - Embedded C/C++ for microcontroller logic
-  - Cloud Dashboard (e.g., Firebase, Thingspeak, or custom backend)
-  - SMS gateway (e.g., GSM module or Twilio API)
+### Embedded Firmware
+
+- **Microcontroller**: ESP32
+- **Framework**: Arduino
+- **UI Library**: LVGL (Light and Versatile Graphics Library)
+- **Communication**: ESP-NOW (Device-to-Device), WiFi (Cloud Connectivity)
+
+### Web Dashboard
+
+- **Framework**: Next.js 15
+- **Library**: React 19
+- **Database**: Supabase
+- **Styling**: Tailwind CSS
+
+### Hardware
+
+- **Sensors**: pH, TDS, Water Level, Temperature
+- **Actuators**: Water Pumps, Misters, Fans
+- **Power**: Solar Panels, Battery Management System
 
 ---
 
@@ -53,39 +60,49 @@ AeroTech is an automated, sensor-driven aeroponics system designed to enhance ve
 
 ---
 
-## Testing & Evaluation
-
-- Sensor calibration tests
-- Automated response tests (pump/fan control logic)
-- Energy consumption analysis under various conditions
-- Growth comparison with traditional farming over fixed time period
-
----
-
 ## Project Structure
 
 ```
 AeroTech/
-├── firmware/              # Microcontroller code (sensor reading, automation)
-├── dashboard/             # Cloud dashboard UI (optional web/mobile)
-├── docs/                  # System design documents, diagrams
-├── hardware/              # Schematics, PCB designs, BOM
-└── README.md              # Project overview
+├── Code/
+│   ├── Embedded/
+│   │   ├── AeroTech_Main/   # Main Controller Firmware (ESP32 + LVGL)
+│   │   └── AeroTech_Sensor/ # Sensor Node Firmware
+│   └── Web/
+│       └── aerotech/        # Web Dashboard (Next.js + Supabase)
+├── Docs/                    # Schematics, PCB Designs, Block Diagrams
+├── Assets/                  # Project Images and Resources
+└── README.md                # Project Overview
 ```
 
 ---
 
-## Future Improvements
+## Getting Started
 
-- Add camera-based plant health monitoring
-- Machine learning for predictive nutrient adjustment
-- Integration with mobile app for full control
+### Firmware (ESP32)
+
+1. Open the project in VS Code with PlatformIO or Arduino IDE.
+2. Ensure necessary libraries are installed (LVGL, TFT_eSPI, etc.).
+3. Upload `AeroTech_Main` to the main controller unit.
+4. Upload `AeroTech_Sensor` to the sensor nodes.
+
+### Web Dashboard
+
+1. Navigate to `Code/Web/aerotech`.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See `LICENSE` for details.
+This project is licensed under the MIT License.
 
 ---
 
