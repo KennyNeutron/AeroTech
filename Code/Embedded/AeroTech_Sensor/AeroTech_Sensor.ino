@@ -2,6 +2,7 @@
 #include "RTClib.h"
 #include "DataStructure.h"
 #include <ph4502c_sensor.h>
+#include <DHT.h>
 
 //Water Level Sensor
 #define WaterLevel_Low 3
@@ -9,6 +10,11 @@
 #define WaterLevel_High 5
 
 RTC_DS3231 RTC;
+
+// ---- DHT setup ----
+#define DHTPIN 6
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
 
 //TDS
 #define TdsSensorPin A0
@@ -27,6 +33,18 @@ int analogBufferIndex = 0;
 float averageVoltage = 0;
 float tdsValue = 0;
 bool TDS_INIT = false;
+
+// Safe read with timeout (prevents stalls)
+bool readDHTSafe(float &tC, float &h, uint16_t timeout_ms = 2500) {
+  uint32_t t0 = millis();
+  do {
+    h = dht.readHumidity();
+    tC = dht.readTemperature();  // Celsius
+    if (!isnan(h) && !isnan(tC)) return true;
+    delay(100);
+  } while (millis() - t0 < timeout_ms);
+  return false;
+}
 
 void setup() {
   Serial.begin(115200);
@@ -70,6 +88,9 @@ void loop() {
   DateTime RTC_Now = RTC.now();
   TDS_loop();
 
+  float tC, h;
+  bool ok = readDHTSafe(tC, h);
+
   // Extract time
   Data_AeroTech.AD_Time_HH = RTC_Now.hour();
   Data_AeroTech.AD_Time_MM = RTC_Now.minute();
@@ -82,7 +103,7 @@ void loop() {
   Data_AeroTech.AD_Date_Year = RTC_Now.year();
 
   // Temperature from DS3231
-  Data_AeroTech.AD_Temperature = RTC.getTemperature();
+  Data_AeroTech.AD_Temperature = tC;
 
   //TDS Value from TDS Sensor
   Data_AeroTech.AD_TDS = tdsValue;
@@ -96,7 +117,7 @@ void loop() {
 
   // Send marker + struct
   Serial.write('A');  // Start marker
-  Serial.write((uint8_t*)&Data_AeroTech, sizeof(Data_AeroTech));
+  Serial.write((uint8_t *)&Data_AeroTech, sizeof(Data_AeroTech));
 
   // Debug print to Serial Monitor
   Serial.print("[Packet Sent] A ");
