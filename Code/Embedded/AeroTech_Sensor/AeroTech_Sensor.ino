@@ -13,7 +13,7 @@ RTC_DS3231 RTC;
 
 // ---- DHT setup ----
 #define DHTPIN 6
-#define DHTTYPE DHT22
+#define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
 //TDS
@@ -66,6 +66,8 @@ void setup() {
 
   Serial.println("AeroTech Dummy Data Sender Ready...");
 
+  dht.begin(); // Initialize DHT sensor
+
   // Fill struct with dummy values
   Data_AeroTech.Header = 0x55;  // Example header
   Data_AeroTech.AD_Time_HH = 0;
@@ -88,8 +90,20 @@ void loop() {
   DateTime RTC_Now = RTC.now();
   TDS_loop();
 
-  float tC, h;
+  float tC = 0.0;
+  float h = 0.0;
   bool ok = readDHTSafe(tC, h);
+
+    // Debug to Serial
+  if (ok) {
+    Serial.print(F("T="));
+    Serial.print(tC);
+    Serial.print(F("C  H="));
+    Serial.print(h);
+    Serial.println(F("%"));
+  } else {
+    Serial.println(F("TIMEOUT: DHT22 not responding"));
+  }
 
   // Extract time
   Data_AeroTech.AD_Time_HH = RTC_Now.hour();
@@ -102,8 +116,11 @@ void loop() {
   Data_AeroTech.AD_Date_Month = RTC_Now.month();
   Data_AeroTech.AD_Date_Year = RTC_Now.year();
 
-  // Temperature from DS3231
-  Data_AeroTech.AD_Temperature = tC;
+  // Temperature from DHT Sensor
+  // Temperature from DHT Sensor
+  if (!isnan(tC)) {
+    Data_AeroTech.AD_Temperature = tC;
+  }
 
   //TDS Value from TDS Sensor
   Data_AeroTech.AD_TDS = tdsValue;
