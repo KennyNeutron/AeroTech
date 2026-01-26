@@ -25,9 +25,7 @@
 
 // Supabase project ref (slug) and anon key
 #define SUPABASE_REF "njjxedmjqlkeoicckvwv"
-const char* SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qanhlZG1qcWxrZW9pY2Nrdnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Njk0MTIsImV4cCI6MjA3NjI0NTQxMn0.xZTAE29TDWj8O_CskPCL4qruAIIow_HM5eE6Dwwf-QM";
-// The devices.id row for this hardware
-const char* DEVICE_ID = "70d605e9-677f-4484-89bb-59cf7d98ed78";
+// constants moved to AeroTech_Main.ino
 
 // Relay pins
 const int PUMP_PIN = 16;
@@ -41,7 +39,7 @@ const int FAN_BTN = 19;
 const bool RELAY_ACTIVE_HIGH = true;
 
 // Poll interval (ms) for pulling actuator_state
-const uint32_t POLL_INTERVAL_MS = 5000;
+const uint32_t POLL_INTERVAL_MS = 7000;  // 7s (staggered from Supabase 10s)
 // =======================================================================
 
 
@@ -126,6 +124,9 @@ void ensureWiFi() {
 
 // ------------------------ HTTP helpers ------------------------
 bool httpGetJson(const String& pathAndQuery, DynamicJsonDocument& doc) {
+  if (isNetworkBusy) return false;
+  isNetworkBusy = true;
+
   ensureWiFi();
 
   WiFiClientSecure tls;
@@ -153,6 +154,7 @@ bool httpGetJson(const String& pathAndQuery, DynamicJsonDocument& doc) {
 
   auto err = deserializeJson(doc, body);
   http.end();
+  isNetworkBusy = false;
 
   if (err) {
     Serial.printf("JSON parse error: %s\n", err.c_str());
@@ -169,6 +171,9 @@ bool httpGetJson(const String& pathAndQuery, DynamicJsonDocument& doc) {
   Example payload for fan : {"mode_fan":"manual","fan_on":false}
 */
 bool httpPatchJson(const String& pathAndQuery, const String& jsonBody, String* outBody = nullptr) {
+  if (isNetworkBusy) return false;
+  isNetworkBusy = true;
+
   ensureWiFi();
 
   WiFiClientSecure tls;
@@ -199,6 +204,7 @@ bool httpPatchJson(const String& pathAndQuery, const String& jsonBody, String* o
   }
 
   http.end();
+  isNetworkBusy = false;
   return true;
 }
 

@@ -3,10 +3,13 @@ const char* ENDPOINT_HOST = "njjxedmjqlkeoicckvwv.functions.supabase.co";  // fo
 
 // const char* DEVICE_ID     = "70d605e9-677f-4484-89bb-59cf7d98ed78";
 const char* DEVICE_SECRET = "aerotech-demo-key";
+const char* SUPABASE_REST_URL = "https://njjxedmjqlkeoicckvwv.supabase.co/rest/v1/system_targets";
 
 /* ====== TIMING ====== */
-const unsigned long SEND_INTERVAL_MS = 10UL * 1000UL;  // 10 seconds
+const unsigned long SEND_INTERVAL_MS = 10UL * 1000UL;   // 10 seconds
+const unsigned long FETCH_INTERVAL_MS = 30UL * 1000UL;  // 30 seconds
 unsigned long lastSend = 0;
+unsigned long lastFetch = 0;
 
 float randFloat(float minVal, float maxVal) {
   return minVal + (float)random(0, 10001) / 10000.0f * (maxVal - minVal);
@@ -46,6 +49,15 @@ void printTlsLastError(WiFiClientSecure& client) {
 
 /* --- POST helper --- */
 bool postReading(float ph, float tds, float tempC, int waterCode) {
+  // Safety check: ensure WiFi is connected
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("POST Reading: WiFi not connected, skipping");
+    return false;
+  }
+
+  if (isNetworkBusy) return false;
+  isNetworkBusy = true;
+
   WiFiClientSecure client;
   client.setInsecure();               // ⚠️ dev only; replace with setCACert for production
   client.setHandshakeTimeout(15000);  // 15s TLS handshake
@@ -87,7 +99,68 @@ bool postReading(float ph, float tds, float tempC, int waterCode) {
 
   http.end();
   client.stop();
+  isNetworkBusy = false;
   return (code == 200);
+}
+
+/* --- GET System Targets --- */
+void fetchSystemTargets() {
+  // Safety check: ensure WiFi is connected
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("FETCH Targets: WiFi not connected, skipping");
+    return;
+  }
+
+  if (isNetworkBusy) return;
+  isNetworkBusy = true;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  client.setHandshakeTimeout(15000);
+  client.setTimeout(15000);
+
+  HTTPClient http;
+  String url = String(SUPABASE_REST_URL) + "?device_id=eq." + DEVICE_ID + "&select=ph_min,ph_max,tds_min,tds_max,temp_min,temp_max";
+
+  if (!http.begin(client, url)) {
+    Serial.println("FETCH Targets: http.begin failed");
+    isNetworkBusy = false;
+    return;
+  }
+
+  http.addHeader("apikey", SUPABASE_ANON_KEY);
+  http.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON_KEY);
+  http.addHeader("Accept", "application/json");
+
+  int code = http.GET();
+  if (code == 200) {
+    String payload = http.getString();
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (!error && doc.is<JsonArray>() && doc.as<JsonArray>().size() > 0) {
+      JsonObject obj = doc[0];
+      phMin = obj["ph_min"] | 6.0;
+      phMax = obj["ph_max"] | 7.0;
+      tdsMin = obj["tds_min"] | 700.0;
+      tdsMax = obj["tds_max"] | 900.0;
+      tempMin = obj["temp_min"] | 22.0;
+      tempMax = obj["temp_max"] | 26.0;
+
+      Serial.println("Targets updated from Supabase:");
+      Serial.printf("  pH: %.2f - %.2f\n", phMin, phMax);
+      Serial.printf("  TDS: %.2f - %.2f\n", tdsMin, tdsMax);
+      Serial.printf("  Temp: %.2f - %.2f\n", tempMin, tempMax);
+    } else {
+      Serial.println("FETCH Targets: Invalid JSON or empty array");
+    }
+  } else {
+    Serial.printf("FETCH Targets: HTTP %d\n", code);
+  }
+
+  http.end();
+  client.stop();
+  isNetworkBusy = false;
 }
 
 void Supabase_setup() {
@@ -136,6 +209,15 @@ void Supabase_loop() {
   }
 
   unsigned long now = millis();
+
+  // Polling for Targets (delayed start to allow system to stabilize)
+  if (now - lastFetch >= FETCH_INTERVAL_MS || (lastFetch == 0 && now > 20000)) {
+    lastFetch = now;
+    Serial.println("Polling Supabase Targets...");
+    fetchSystemTargets();
+  }
+
+  // Pushing Readings
   if (now - lastSend >= SEND_INTERVAL_MS) {
     lastSend = now;
     // float ph    = randFloat(5.5, 7.5);

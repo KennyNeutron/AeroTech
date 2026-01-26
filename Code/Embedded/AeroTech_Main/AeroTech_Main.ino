@@ -40,13 +40,26 @@
 #include <time.h>
 // #include "font_Font90Icon_48_1bpp.c"
 
+// Supabase Configuration
+const char* DEVICE_ID = "70d605e9-677f-4484-89bb-59cf7d98ed78";
+const char* SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qanhlZG1qcWxrZW9pY2Nrdnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Njk0MTIsImV4cCI6MjA3NjI0NTQxMn0.xZTAE29TDWj8O_CskPCL4qruAIIow_HM5eE6Dwwf-QM";
+
 bool AeroTech_WifiStatus = false;
+bool isNetworkBusy = false;  // Mutex for TLS/Network operations
 
 //AeroTech Variables
 float phValue = 0.0;
 float tdsValue = 0.0;
 uint8_t waterLevel = 0;
 float temperature = 0.0;
+
+// Target Ranges (Fetched from Supabase)
+float phMin = 6.0;
+float phMax = 7.0;
+float tdsMin = 700.0;
+float tdsMax = 900.0;
+float tempMin = 22.0;
+float tempMax = 26.0;
 
 bool isDayTime = true;  // Set to false for night mode
 
@@ -189,16 +202,20 @@ bool DebugSensorData = false;
 
 void loop() {
 
+  //  Serial.println("Limits");
+  //   Serial.println("pH:" + String(phMin)+ "-" + String(phMax));
+  //   Serial.println("TDS:" + String(tdsMin)+ "-" + String(tdsMax));
+  //   Serial.println("Temp:" + String(tempMin)+ "-" + String(tempMax));
 
   if (CurrentScreenID == 0x0000) {
     SerialCOM();
     Screen_MainMenu();  // This will now efficiently update existing elements
-  }else if(CurrentScreenID == 0x0001){
+  } else if (CurrentScreenID == 0x0001) {
     Screen_WiFiMenu();  // This will now efficiently update existing elements
   }
 
   lv_task_handler();  // let the GUI do its work
-  
+
   // Update LVGL tick
   static uint32_t last_tick = 0;
   uint32_t now = millis();
@@ -206,8 +223,8 @@ void loop() {
     lv_tick_inc(now - last_tick);
     last_tick = now;
   }
-  
-  delay(5); // Yield to other tasks (Watchdog)
+
+  delay(5);  // Yield to other tasks (Watchdog)
 }
 
 void SerialCOM() {

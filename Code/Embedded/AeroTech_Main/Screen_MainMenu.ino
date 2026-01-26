@@ -39,10 +39,10 @@ lv_obj_t* create_label(lv_obj_t* parent, const char* text, const lv_font_t* font
 
 // Helper function to determine pH status and color
 void getPhStatus(float ph, const char** status, lv_color_t* color) {
-  if (ph > 6.5) {
+  if (ph > phMax) {
     *status = "Too High";
     *color = lv_color_hex(0xFF4444);  // Red for alkaline
-  } else if (ph >= 5.5 && ph <= 6.5) {
+  } else if (ph >= phMin && ph <= phMax) {
     *status = "Right Value";
     *color = lv_color_hex(0x44AA44);  // Green for ideal
   } else {
@@ -53,10 +53,10 @@ void getPhStatus(float ph, const char** status, lv_color_t* color) {
 
 // Helper function to determine TDS status and color
 void getTDSStatus(float tds, const char** status, lv_color_t* color) {
-  if (tds < 560) {
+  if (tds < tdsMin) {
     *status = "Too Low";
     *color = lv_color_hex(0xFF8844);  // Orange for weak nutrients
-  } else if (tds >= 560 && tds <= 840) {
+  } else if (tds >= tdsMin && tds <= tdsMax) {
     *status = "Normal";
     *color = lv_color_hex(0x44AA44);  // Green for normal
   } else {
@@ -88,11 +88,11 @@ void getWaterLevelStatus(float level, const char** status, lv_color_t* color) {
 // Helper function to determine Temperature status and color based on day/night
 void getTemperatureStatus(float temp, bool isDay, const char** status, lv_color_t* color) {
   if (isDay) {
-    // Day conditions: 18-24°C ideal
-    if (temp < 18) {
+    // Dynamic conditions from Supabase
+    if (temp < tempMin) {
       *status = "Too Cold";
       *color = lv_color_hex(0x4488FF);  // Blue for cold
-    } else if (temp >= 18 && temp <= 24) {
+    } else if (temp >= tempMin && temp <= tempMax) {
       *status = "Normal";
       *color = lv_color_hex(0x44AA44);  // Green for normal
     } else {
@@ -100,11 +100,11 @@ void getTemperatureStatus(float temp, bool isDay, const char** status, lv_color_
       *color = lv_color_hex(0xFF4444);  // Red for hot
     }
   } else {
-    // Night conditions: 12-18°C ideal
-    if (temp < 12) {
+    // Night conditions: currently also uses fetched ranges
+    if (temp < tempMin) {
       *status = "Too Cold";
       *color = lv_color_hex(0x4488FF);  // Blue for cold
-    } else if (temp >= 12 && temp <= 18) {
+    } else if (temp >= tempMin && temp <= tempMax) {
       *status = "Normal";
       *color = lv_color_hex(0x44AA44);  // Green for normal
     } else {
