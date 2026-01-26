@@ -94,16 +94,16 @@ void loop() {
   float h = 0.0;
   bool ok = readDHTSafe(tC, h);
 
-    // Debug to Serial
-  if (ok) {
-    Serial.print(F("T="));
-    Serial.print(tC);
-    Serial.print(F("C  H="));
-    Serial.print(h);
-    Serial.println(F("%"));
-  } else {
-    Serial.println(F("TIMEOUT: DHT22 not responding"));
-  }
+  //   // Debug to Serial
+  // if (ok) {
+  //   Serial.print(F("T="));
+  //   Serial.print(tC);
+  //   Serial.print(F("C  H="));
+  //   Serial.print(h);
+  //   Serial.println(F("%"));
+  // } else {
+  //   Serial.println(F("TIMEOUT: DHT22 not responding"));
+  // }
 
   // Extract time
   Data_AeroTech.AD_Time_HH = RTC_Now.hour();
@@ -137,30 +137,30 @@ void loop() {
   Serial.write((uint8_t *)&Data_AeroTech, sizeof(Data_AeroTech));
 
   // Debug print to Serial Monitor
-  Serial.print("[Packet Sent] A ");
-  Serial.print("Time: ");
-  Serial.print(Data_AeroTech.AD_Time_HH);
-  Serial.print(":");
-  Serial.print(Data_AeroTech.AD_Time_MM);
-  Serial.print(":");
-  Serial.print(Data_AeroTech.AD_Time_SS);
-  Serial.print(" | Date: ");
-  Serial.print(Data_AeroTech.AD_Date_Year);
-  Serial.print("/");
-  Serial.print(Data_AeroTech.AD_Date_Month);
-  Serial.print("/");
-  Serial.print(Data_AeroTech.AD_Date_Day);
-  Serial.print(" | Day: ");
-  Serial.print(Data_AeroTech.AD_DayOfWeek);
+  // Serial.print("[Packet Sent] A ");
+  // Serial.print("Time: ");
+  // Serial.print(Data_AeroTech.AD_Time_HH);
+  // Serial.print(":");
+  // Serial.print(Data_AeroTech.AD_Time_MM);
+  // Serial.print(":");
+  // Serial.print(Data_AeroTech.AD_Time_SS);
+  // Serial.print(" | Date: ");
+  // Serial.print(Data_AeroTech.AD_Date_Year);
+  // Serial.print("/");
+  // Serial.print(Data_AeroTech.AD_Date_Month);
+  // Serial.print("/");
+  // Serial.print(Data_AeroTech.AD_Date_Day);
+  // Serial.print(" | Day: ");
+  // Serial.print(Data_AeroTech.AD_DayOfWeek);
 
-  Serial.print(" | pH: ");
-  Serial.print(Data_AeroTech.AD_pH);
-  Serial.print(" | TDS: ");
-  Serial.print(Data_AeroTech.AD_TDS);
-  Serial.print(" | Level: ");
-  Serial.print(Data_AeroTech.AD_WaterLevel);
-  Serial.print(" | Temp: ");
-  Serial.println(Data_AeroTech.AD_Temperature);
+  // Serial.print(" | pH: ");
+  // Serial.print(Data_AeroTech.AD_pH);
+  // Serial.print(" | TDS: ");
+  // Serial.print(Data_AeroTech.AD_TDS);
+  // Serial.print(" | Level: ");
+  // Serial.print(Data_AeroTech.AD_WaterLevel);
+  // Serial.print(" | Temp: ");
+  // Serial.println(Data_AeroTech.AD_Temperature);
   delay(3);
 
   // WaterLevelSensor_Level();
