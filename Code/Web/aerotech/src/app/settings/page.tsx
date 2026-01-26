@@ -219,7 +219,7 @@ export default function SettingsPage() {
               setPhRange((prev) => ({ ...prev, max: Number(val.toFixed(1)) }))
             }
             step={0.1}
-            minLimit={4}
+            minLimit={0}
             maxLimit={10}
             loading={loading}
           />
@@ -236,7 +236,7 @@ export default function SettingsPage() {
             onMaxChange={(val) =>
               setTdsRange((prev) => ({ ...prev, max: Math.round(val) }))
             }
-            step={50}
+            step={10}
             minLimit={0}
             maxLimit={2500}
             loading={loading}
@@ -263,7 +263,7 @@ export default function SettingsPage() {
               setTempRange((prev) => ({ ...prev, max: Number(val.toFixed(1)) }))
             }
             step={0.5}
-            minLimit={5}
+            minLimit={0}
             maxLimit={45}
             loading={loading}
           />
