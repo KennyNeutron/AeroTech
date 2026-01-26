@@ -21,18 +21,18 @@ export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Editable targets
-  const [phTarget, setPhTarget] = useState(6.5);
-  const [tdsTarget, setTdsTarget] = useState(800);
+  // Editable targets (Ranges)
+  const [phRange, setPhRange] = useState({ min: 6.0, max: 7.0 });
+  const [tdsRange, setTdsRange] = useState({ min: 700, max: 900 });
+  const [tempRange, setTempRange] = useState({ min: 22.0, max: 26.0 });
   const [waterTarget, setWaterTarget] = useState<WaterTarget>("Medium");
-  const [tempTarget, setTempTarget] = useState(24);
 
   // Last saved/loaded snapshot (for Discard)
   const [initialTargets, setInitialTargets] = useState({
-    ph: 6.5,
-    tds: 800,
+    ph: { min: 6.0, max: 7.0 },
+    tds: { min: 700, max: 900 },
+    temp: { min: 22.0, max: 26.0 },
     water: "Medium" as WaterTarget,
-    temp: 24,
   });
 
   // Current readings (display-only)
@@ -47,14 +47,17 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dirty state (enable/disable Save/Discard)
+  // Dirty state
   const isDirty =
-    phTarget !== initialTargets.ph ||
-    tdsTarget !== initialTargets.tds ||
-    tempTarget !== initialTargets.temp ||
+    phRange.min !== initialTargets.ph.min ||
+    phRange.max !== initialTargets.ph.max ||
+    tdsRange.min !== initialTargets.tds.min ||
+    tdsRange.max !== initialTargets.tds.max ||
+    tempRange.min !== initialTargets.temp.min ||
+    tempRange.max !== initialTargets.temp.max ||
     waterTarget !== initialTargets.water;
 
-  // Load targets + latest readings from Supabase
+  // Load targets + latest readings
   useEffect(() => {
     let mounted = true;
 
@@ -65,34 +68,39 @@ export default function SettingsPage() {
       // 1) Targets
       const { data: targets, error: tErr } = await supabase
         .from("system_targets")
-        .select("ph_target, tds_target, temp_target, water_level_target")
+        .select(
+          "ph_min, ph_max, tds_min, tds_max, temp_min, temp_max, water_level_target",
+        )
         .eq("device_id", DEVICE_ID)
         .maybeSingle();
 
       if (tErr) {
         setError(tErr.message);
       } else if (targets) {
-        const ph = Number(targets.ph_target ?? 6.5);
-        const tds = Number(targets.tds_target ?? 800);
-        const temp = Number(targets.temp_target ?? 24);
-        const water = fromCode(
-          typeof targets.water_level_target === "number"
-            ? targets.water_level_target
-            : null
-        );
+        const ph = {
+          min: Number(targets.ph_min ?? 6.0),
+          max: Number(targets.ph_max ?? 7.0),
+        };
+        const tds = {
+          min: Number(targets.tds_min ?? 700),
+          max: Number(targets.tds_max ?? 900),
+        };
+        const temp = {
+          min: Number(targets.temp_min ?? 22.0),
+          max: Number(targets.temp_max ?? 26.0),
+        };
+        const water = fromCode(targets.water_level_target);
 
         if (mounted) {
-          setPhTarget(ph);
-          setTdsTarget(tds);
-          setTempTarget(temp);
+          setPhRange(ph);
+          setTdsRange(tds);
+          setTempRange(temp);
           setWaterTarget(water);
-
-          // snapshot for Discard
           setInitialTargets({ ph, tds, temp, water });
         }
       }
 
-      // 2) Latest reading (optional)
+      // 2) Latest reading
       const { data: reading, error: rErr } = await supabase
         .from("sensor_readings")
         .select("ph, tds, temp_c, water_level_code, recorded_at")
@@ -106,11 +114,7 @@ export default function SettingsPage() {
           ph: Number(reading.ph ?? 0),
           tds: Number(reading.tds ?? 0),
           temp: Number(reading.temp_c ?? 0),
-          water: fromCode(
-            typeof reading.water_level_code === "number"
-              ? reading.water_level_code
-              : null
-          ),
+          water: fromCode(reading.water_level_code),
         });
       }
 
@@ -123,16 +127,16 @@ export default function SettingsPage() {
   }, [supabase]);
 
   const resetDefaults = () => {
-    setPhTarget(6.5);
-    setTdsTarget(800);
+    setPhRange({ min: 6.0, max: 7.0 });
+    setTdsRange({ min: 700, max: 900 });
+    setTempRange({ min: 22.0, max: 26.0 });
     setWaterTarget("Medium");
-    setTempTarget(24);
   };
 
   const discardChanges = () => {
-    setPhTarget(initialTargets.ph);
-    setTdsTarget(initialTargets.tds);
-    setTempTarget(initialTargets.temp);
+    setPhRange(initialTargets.ph);
+    setTdsRange(initialTargets.tds);
+    setTempRange(initialTargets.temp);
     setWaterTarget(initialTargets.water);
   };
 
@@ -143,13 +147,16 @@ export default function SettingsPage() {
     const { error } = await supabase.from("system_targets").upsert(
       {
         device_id: DEVICE_ID,
-        ph_target: phTarget,
-        tds_target: tdsTarget,
-        temp_target: tempTarget,
+        ph_min: phRange.min,
+        ph_max: phRange.max,
+        tds_min: tdsRange.min,
+        tds_max: tdsRange.max,
+        temp_min: tempRange.min,
+        temp_max: tempRange.max,
         water_level_target: toCode[waterTarget],
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "device_id" } // requires UNIQUE(device_id)
+      { onConflict: "device_id" },
     );
 
     setSaving(false);
@@ -159,16 +166,13 @@ export default function SettingsPage() {
       return;
     }
 
-    // Update the snapshot so Discard becomes disabled
     setInitialTargets({
-      ph: phTarget,
-      tds: tdsTarget,
-      temp: tempTarget,
+      ph: phRange,
+      tds: tdsRange,
+      temp: tempRange,
       water: waterTarget,
     });
-
     router.refresh();
-    // You can replace alert with a toast, if you have one
     alert("Settings saved!");
   };
 
@@ -186,7 +190,7 @@ export default function SettingsPage() {
               Parameter Settings
             </h2>
             <p className="text-sm text-brand-800/70">
-              Adjust target values for all sensors
+              Adjust target ranges for all sensors
             </p>
           </div>
           <div className="mt-4 md:mt-0">
@@ -206,25 +210,35 @@ export default function SettingsPage() {
             title="pH Level"
             unit="pH"
             current={`${current.ph.toFixed(1)} pH`}
-            target={`${phTarget.toFixed(1)} pH`}
-            onDecrease={() =>
-              setPhTarget(Math.max(Number((phTarget - 0.1).toFixed(1)), 4))
+            minValue={phRange.min}
+            maxValue={phRange.max}
+            onMinChange={(val) =>
+              setPhRange((prev) => ({ ...prev, min: Number(val.toFixed(1)) }))
             }
-            onIncrease={() =>
-              setPhTarget(Math.min(Number((phTarget + 0.1).toFixed(1)), 8))
+            onMaxChange={(val) =>
+              setPhRange((prev) => ({ ...prev, max: Number(val.toFixed(1)) }))
             }
-            rangeInfo="Min: 4 | Max: 8"
+            step={0.1}
+            minLimit={4}
+            maxLimit={10}
             loading={loading}
           />
 
           <ParameterCard
             title="TDS"
             unit="ppm"
-            current={`${current.tds.toFixed(1)} ppm`}
-            target={`${tdsTarget.toFixed(0)} ppm`}
-            onDecrease={() => setTdsTarget(Math.max(tdsTarget - 10, 0))}
-            onIncrease={() => setTdsTarget(Math.min(tdsTarget + 10, 2000))}
-            rangeInfo="Min: 0 | Max: 2000"
+            current={`${current.tds.toFixed(0)} ppm`}
+            minValue={tdsRange.min}
+            maxValue={tdsRange.max}
+            onMinChange={(val) =>
+              setTdsRange((prev) => ({ ...prev, min: Math.round(val) }))
+            }
+            onMaxChange={(val) =>
+              setTdsRange((prev) => ({ ...prev, max: Math.round(val) }))
+            }
+            step={50}
+            minLimit={0}
+            maxLimit={2500}
             loading={loading}
           />
 
@@ -240,14 +254,17 @@ export default function SettingsPage() {
             title="Temperature"
             unit="°C"
             current={`${current.temp.toFixed(1)} °C`}
-            target={`${tempTarget.toFixed(1)} °C`}
-            onDecrease={() =>
-              setTempTarget(Math.max(Number((tempTarget - 0.5).toFixed(1)), 10))
+            minValue={tempRange.min}
+            maxValue={tempRange.max}
+            onMinChange={(val) =>
+              setTempRange((prev) => ({ ...prev, min: Number(val.toFixed(1)) }))
             }
-            onIncrease={() =>
-              setTempTarget(Math.min(Number((tempTarget + 0.5).toFixed(1)), 35))
+            onMaxChange={(val) =>
+              setTempRange((prev) => ({ ...prev, max: Number(val.toFixed(1)) }))
             }
-            rangeInfo="Min: 10 | Max: 35"
+            step={0.5}
+            minLimit={5}
+            maxLimit={45}
             loading={loading}
           />
         </div>
@@ -255,7 +272,7 @@ export default function SettingsPage() {
         {/* Action buttons */}
         <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            className="bg-brand-700 hover:bg-brand-800 text-white font-medium px-6 py-3 rounded-lg flex items-center justify-center gap-2 shadow disabled:opacity-50"
+            className="bg-brand-700 hover:bg-brand-800 text-white font-medium px-8 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-brand-200 transition-all disabled:opacity-50"
             onClick={saveAll}
             disabled={loading || saving || !isDirty}
           >
@@ -263,7 +280,7 @@ export default function SettingsPage() {
           </button>
 
           <button
-            className="bg-white border border-brand-300 text-brand-800 font-medium px-6 py-3 rounded-lg hover:bg-brand-100 shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            className="bg-white border-2 border-brand-200 text-brand-800 font-medium px-6 py-3 rounded-xl hover:bg-brand-50 hover:border-brand-300 transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
             onClick={resetDefaults}
             disabled={saving}
           >
@@ -273,11 +290,11 @@ export default function SettingsPage() {
           <button
             onClick={discardChanges}
             disabled={!isDirty || saving || loading}
-            className={`px-6 py-3 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2
+            className={`px-6 py-3 rounded-xl font-medium shadow-sm transition-all flex items-center justify-center gap-2
               ${
                 !isDirty || saving || loading
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-white border border-brand-300 text-brand-800 hover:bg-brand-100"
+                  ? "bg-gray-50 text-gray-400 cursor-not-allowed border-2 border-gray-100"
+                  : "bg-white border-2 border-orange-100 text-orange-700 hover:bg-orange-50 hover:border-orange-200"
               }`}
           >
             🗑️ Discard Changes
@@ -294,65 +311,108 @@ function ParameterCard({
   title,
   unit,
   current,
-  target,
-  onDecrease,
-  onIncrease,
-  rangeInfo,
+  minValue,
+  maxValue,
+  onMinChange,
+  onMaxChange,
+  step,
+  minLimit,
+  maxLimit,
   loading,
 }: {
   title: string;
-  unit?: string;
+  unit: string;
   current: string;
-  target: string;
-  onDecrease: () => void;
-  onIncrease: () => void;
-  rangeInfo: string;
+  minValue: number;
+  maxValue: number;
+  onMinChange: (val: number) => void;
+  onMaxChange: (val: number) => void;
+  step: number;
+  minLimit: number;
+  maxLimit: number;
   loading?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-brand-100 shadow-card p-5">
-      <h3 className="text-brand-800 font-semibold mb-4">{title}</h3>
-
-      <div className="flex justify-between mb-3">
-        <div>
-          <p className="text-sm text-brand-800/70">Current</p>
-          <p className="text-lg font-medium text-brand-800">
+    <div className="bg-white rounded-3xl border border-brand-100 shadow-card p-6">
+      <div className="flex justify-between items-start mb-6">
+        <h3 className="text-brand-900 font-bold text-lg">{title}</h3>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase tracking-widest text-brand-400 mb-1">
+            Current
+          </p>
+          <p className="text-xl font-bold text-brand-800">
             {loading ? "—" : current}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-brand-800/70">Target</p>
-          <p className="text-lg font-medium text-brand-600">
-            {loading ? "—" : target}
-          </p>
-        </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-sm text-brand-800/70">Adjust Target {unit}</span>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onDecrease}
-            className="bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-md w-7 h-7 flex items-center justify-center font-bold"
-            disabled={loading}
-          >
-            -
-          </button>
-          <div className="w-16 text-center border border-brand-200 rounded-md py-1 bg-brand-50 font-medium text-brand-800">
-            {loading ? "—" : target.split(" ")[0]}
+      <div className="space-y-6">
+        {/* Min Adjuster */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand-400">
+              Target Min
+            </p>
+            <p className="text-lg font-bold text-brand-600">
+              {loading ? "—" : `${minValue} ${unit}`}
+            </p>
           </div>
-          <button
-            onClick={onIncrease}
-            className="bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-md w-7 h-7 flex items-center justify-center font-bold"
-            disabled={loading}
-          >
-            +
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onMinChange(Math.max(minValue - step, minLimit))}
+              className="bg-brand-50 hover:bg-brand-100 text-brand-700 w-10 h-10 rounded-xl flex items-center justify-center font-black transition-colors"
+              disabled={loading}
+            >
+              −
+            </button>
+            <button
+              onClick={() =>
+                onMinChange(Math.min(minValue + step, maxValue - step))
+              }
+              className="bg-brand-50 hover:bg-brand-100 text-brand-700 w-10 h-10 rounded-xl flex items-center justify-center font-black transition-colors"
+              disabled={loading}
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        {/* Max Adjuster */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand-400">
+              Target Max
+            </p>
+            <p className="text-lg font-bold text-brand-600">
+              {loading ? "—" : `${maxValue} ${unit}`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                onMaxChange(Math.max(maxValue - step, minValue + step))
+              }
+              className="bg-brand-50 hover:bg-brand-100 text-brand-700 w-10 h-10 rounded-xl flex items-center justify-center font-black transition-colors"
+              disabled={loading}
+            >
+              −
+            </button>
+            <button
+              onClick={() => onMaxChange(Math.min(maxValue + step, maxLimit))}
+              className="bg-brand-50 hover:bg-brand-100 text-brand-700 w-10 h-10 rounded-xl flex items-center justify-center font-black transition-colors"
+              disabled={loading}
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex justify-between mt-3 text-xs text-brand-800/60">
-        <span>{rangeInfo}</span>
+      <div className="mt-6 pt-4 border-t border-brand-50 flex justify-between text-[11px] font-bold text-brand-400 uppercase tracking-tighter">
+        <span>Range Policy</span>
+        <span>
+          {minLimit} {unit} to {maxLimit} {unit}
+        </span>
       </div>
     </div>
   );

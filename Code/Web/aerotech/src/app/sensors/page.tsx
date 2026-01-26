@@ -34,20 +34,27 @@ export default async function SensorsPage() {
 
   const { data: targets } = await supabase
     .from("system_targets")
-    .select("ph_target, tds_target, temp_target, water_level_target")
+    .select(
+      "ph_min, ph_max, tds_min, tds_max, temp_min, temp_max, water_level_target",
+    )
     .eq("device_id", DEVICE_ID)
     .maybeSingle();
 
   const initialTargets = targets
     ? {
-        ph: Number(targets.ph_target ?? 6.5),
-        tds: Number(targets.tds_target ?? 800),
-        temp: Number(targets.temp_target ?? 24),
-        water: fromCode(
-          typeof targets.water_level_target === "number"
-            ? targets.water_level_target
-            : null
-        ),
+        ph: {
+          min: Number(targets.ph_min ?? 6.0),
+          max: Number(targets.ph_max ?? 7.0),
+        },
+        tds: {
+          min: Number(targets.tds_min ?? 700),
+          max: Number(targets.tds_max ?? 900),
+        },
+        temp: {
+          min: Number(targets.temp_min ?? 22.0),
+          max: Number(targets.temp_max ?? 26.0),
+        },
+        water: fromCode(targets.water_level_target),
       }
     : null;
 

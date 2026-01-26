@@ -18,9 +18,12 @@ type ReadingRow = {
 };
 
 type TargetsRow = {
-  ph_target: number | null;
-  tds_target: number | null;
-  temp_target: number | null;
+  ph_min: number | null;
+  ph_max: number | null;
+  tds_min: number | null;
+  tds_max: number | null;
+  temp_min: number | null;
+  temp_max: number | null;
   water_level_target: number | null;
   device_id?: string;
 };
@@ -34,9 +37,9 @@ type Reading = {
 };
 
 type Targets = {
-  ph: number;
-  tds: number;
-  temp: number;
+  ph: { min: number; max: number };
+  tds: { min: number; max: number };
+  temp: { min: number; max: number };
   water: WaterTarget;
 };
 
@@ -57,7 +60,7 @@ function isTargetsRow(row: unknown): row is TargetsRow {
   return (
     !!row &&
     typeof row === "object" &&
-    "ph_target" in (row as Record<string, unknown>)
+    "ph_min" in (row as Record<string, unknown>)
   );
 }
 
@@ -97,7 +100,7 @@ export default function LiveSensors({
             water_level_code: Number(row.water_level_code ?? 1),
             recorded_at: row.recorded_at ?? undefined,
           });
-        }
+        },
       )
       .subscribe();
 
@@ -117,16 +120,21 @@ export default function LiveSensors({
           if (!isTargetsRow(row)) return;
 
           setTargets({
-            ph: Number(row.ph_target ?? 6.5),
-            tds: Number(row.tds_target ?? 800),
-            temp: Number(row.temp_target ?? 24),
-            water: fromCode(
-              typeof row.water_level_target === "number"
-                ? row.water_level_target
-                : null
-            ),
+            ph: {
+              min: Number(row.ph_min ?? 6.0),
+              max: Number(row.ph_max ?? 7.0),
+            },
+            tds: {
+              min: Number(row.tds_min ?? 700),
+              max: Number(row.tds_max ?? 900),
+            },
+            temp: {
+              min: Number(row.temp_min ?? 22.0),
+              max: Number(row.temp_max ?? 26.0),
+            },
+            water: fromCode(row.water_level_target),
           });
-        }
+        },
       )
       .subscribe();
 
@@ -194,15 +202,18 @@ export default function LiveSensors({
       {/* Targets row */}
       <section className="px-4 mt-6 mb-16">
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <TargetCard label="pH Target" value={`${fmt(targets?.ph, 1)} pH`} />
+          <TargetCard
+            label="pH Target"
+            value={`${fmt(targets?.ph.min, 1)} - ${fmt(targets?.ph.max, 1)} pH`}
+          />
           <TargetCard
             label="TDS Target"
-            value={`${fmt(targets?.tds, 0)} ppm`}
+            value={`${fmt(targets?.tds.min, 0)} - ${fmt(targets?.tds.max, 0)} ppm`}
           />
           <TargetCard label="Level Target" value={targets?.water ?? "—"} />
           <TargetCard
             label="Temp Target"
-            value={`${fmt(targets?.temp, 1)}°C`}
+            value={`${fmt(targets?.temp.min, 1)} - ${fmt(targets?.temp.max, 1)}°C`}
           />
         </div>
       </section>
