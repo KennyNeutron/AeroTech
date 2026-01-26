@@ -3,6 +3,7 @@ export const revalidate = 0;
 
 import AppHeader from "@/components/AppHeader";
 import NavTabs from "@/components/NavTabs";
+import Image from "next/image";
 
 export default async function HomePage() {
   return (
@@ -48,8 +49,8 @@ export default async function HomePage() {
                 Mission
               </h2>
               <blockquote className="text-xl font-semibold mb-6 italic border-l-4 border-brand-400 pl-4">
-                "To empower modern agriculture through smart automation and
-                sustainable energy."
+                &quot;To empower modern agriculture through smart automation and
+                sustainable energy.&quot;
               </blockquote>
               <p className="text-brand-100 leading-relaxed">
                 Our mission is to design and implement a reliable,
@@ -69,8 +70,8 @@ export default async function HomePage() {
                 Vision
               </h2>
               <blockquote className="text-xl font-semibold text-brand-900 mb-6 italic border-l-4 border-brand-500 pl-4">
-                "To lead the transition toward a global, tech-driven sustainable
-                food system."
+                &quot;To lead the transition toward a global, tech-driven
+                sustainable food system.&quot;
               </blockquote>
               <p className="text-brand-800 leading-relaxed">
                 We envision a world where anyone, anywhere, can grow
@@ -106,9 +107,11 @@ export default async function HomePage() {
               >
                 <div className="relative w-32 h-32 mb-6 transition-all duration-500 group-hover:scale-105">
                   <div className="absolute inset-0 bg-brand-500 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity"></div>
-                  <img
+                  <Image
                     src={proponent.avatar}
                     alt={proponent.name}
+                    width={128}
+                    height={128}
                     className="relative w-full h-full object-cover rounded-full border-4 border-white shadow-xl ring-1 ring-brand-100"
                   />
                 </div>
