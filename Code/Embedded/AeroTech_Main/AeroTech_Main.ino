@@ -225,7 +225,7 @@ void loop() {
   }
 
   delay(5);  // Yield to other tasks (Watchdog)
-}
+ }
 
 void SerialCOM() {
   if (CustomSerial.available() > 0) {
