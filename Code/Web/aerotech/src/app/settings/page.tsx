@@ -26,6 +26,7 @@ export default function SettingsPage() {
   const [tdsRange, setTdsRange] = useState({ min: 700, max: 900 });
   const [tempRange, setTempRange] = useState({ min: 22.0, max: 26.0 });
   const [waterTarget, setWaterTarget] = useState<WaterTarget>("Medium");
+  const [smsNumber, setSmsNumber] = useState("");
 
   // Last saved/loaded snapshot (for Discard)
   const [initialTargets, setInitialTargets] = useState({
@@ -33,6 +34,7 @@ export default function SettingsPage() {
     tds: { min: 700, max: 900 },
     temp: { min: 22.0, max: 26.0 },
     water: "Medium" as WaterTarget,
+    sms: "",
   });
 
   // Current readings (display-only)
@@ -55,7 +57,8 @@ export default function SettingsPage() {
     tdsRange.max !== initialTargets.tds.max ||
     tempRange.min !== initialTargets.temp.min ||
     tempRange.max !== initialTargets.temp.max ||
-    waterTarget !== initialTargets.water;
+    waterTarget !== initialTargets.water ||
+    smsNumber !== initialTargets.sms;
 
   // Load targets + latest readings
   useEffect(() => {
@@ -69,7 +72,7 @@ export default function SettingsPage() {
       const { data: targets, error: tErr } = await supabase
         .from("system_targets")
         .select(
-          "ph_min, ph_max, tds_min, tds_max, temp_min, temp_max, water_level_target",
+          "ph_min, ph_max, tds_min, tds_max, temp_min, temp_max, water_level_target, smsRecipientNumber",
         )
         .eq("device_id", DEVICE_ID)
         .maybeSingle();
@@ -90,13 +93,15 @@ export default function SettingsPage() {
           max: Number(targets.temp_max ?? 26.0),
         };
         const water = fromCode(targets.water_level_target);
+        const sms = targets.smsRecipientNumber || "";
 
         if (mounted) {
           setPhRange(ph);
           setTdsRange(tds);
           setTempRange(temp);
           setWaterTarget(water);
-          setInitialTargets({ ph, tds, temp, water });
+          setSmsNumber(sms);
+          setInitialTargets({ ph, tds, temp, water, sms });
         }
       }
 
@@ -131,6 +136,7 @@ export default function SettingsPage() {
     setTdsRange({ min: 700, max: 900 });
     setTempRange({ min: 22.0, max: 26.0 });
     setWaterTarget("Medium");
+    setSmsNumber("");
   };
 
   const discardChanges = () => {
@@ -138,6 +144,7 @@ export default function SettingsPage() {
     setTdsRange(initialTargets.tds);
     setTempRange(initialTargets.temp);
     setWaterTarget(initialTargets.water);
+    setSmsNumber(initialTargets.sms);
   };
 
   const saveAll = async () => {
@@ -154,6 +161,7 @@ export default function SettingsPage() {
         temp_min: tempRange.min,
         temp_max: tempRange.max,
         water_level_target: toCode[waterTarget],
+        smsRecipientNumber: smsNumber,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "device_id" },
@@ -171,6 +179,7 @@ export default function SettingsPage() {
       tds: tdsRange,
       temp: tempRange,
       water: waterTarget,
+      sms: smsNumber,
     });
     router.refresh();
     alert("Settings saved!");
@@ -265,6 +274,13 @@ export default function SettingsPage() {
             step={0.5}
             minLimit={0}
             maxLimit={45}
+            loading={loading}
+          />
+
+          <SmsCard
+            title="SMS Alerts"
+            value={smsNumber}
+            onChange={setSmsNumber}
             loading={loading}
           />
         </div>
@@ -471,6 +487,44 @@ function WaterLevelCard({
             </button>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SmsCard({
+  title,
+  value,
+  onChange,
+  loading,
+}: {
+  title: string;
+  value: string;
+  onChange: (val: string) => void;
+  loading?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-3xl border border-brand-100 shadow-card p-6">
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="text-brand-900 font-bold text-lg">{title}</h3>
+      </div>
+      <div>
+        <label className="text-[10px] font-black uppercase tracking-widest text-brand-400 mb-1 block">
+          Recipient Number
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={loading ? "Loading..." : value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="09XXXXXXXXX"
+            className="w-full bg-brand-50 border border-brand-100 text-brand-900 text-lg font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all placeholder:text-brand-300/50 disabled:opacity-50"
+            disabled={loading}
+          />
+        </div>
+        <p className="text-xs text-brand-400 mt-2 font-medium">
+          Format: 11-digit mobile number (e.g., 09123456789)
+        </p>
       </div>
     </div>
   );
