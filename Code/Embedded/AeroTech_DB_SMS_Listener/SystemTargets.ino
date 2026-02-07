@@ -19,7 +19,6 @@ void fetchSystemTargets() {
   int httpCode = http.GET();
   if (httpCode == 200) {
     String payload = http.getString();
-    // Serial.println(payload); // Debug
 
     StaticJsonDocument<1024> doc;
     DeserializationError error = deserializeJson(doc, payload);
@@ -35,7 +34,6 @@ void fetchSystemTargets() {
       currentTargets.waterLevelTarget = obj["water_level_target"] | 1;
       currentTargets.smsRecipientNumber = obj["smsRecipientNumber"].as<String>();
 
-      Serial.println("--- System Targets Updated ---");
       Serial.printf("pH: %.1f - %.1f\n", currentTargets.phMin, currentTargets.phMax);
       Serial.printf("TDS: %.0f - %.0f\n", currentTargets.tdsMin, currentTargets.tdsMax);
       Serial.printf("Temp: %.1f - %.1f\n", currentTargets.tempMin, currentTargets.tempMax);
