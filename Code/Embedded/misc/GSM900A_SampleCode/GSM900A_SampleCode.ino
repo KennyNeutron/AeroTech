@@ -1,32 +1,40 @@
 #include <SoftwareSerial.h>
 
-// RX, TX (Arduino side)
-SoftwareSerial sim900(7, 8);
-
-void sendSMS() {
-  sim900.println("AT");
-  delay(1000);
-
-  sim900.println("AT+CMGF=1");   // Set SMS text mode
-  delay(1000);
-
-  sim900.println("AT+CMGS=\"+639602312239\""); // <-- replace with your number
-  delay(1000);
-
-  sim900.print("Hello World from SIM900A!");
-  delay(500);
-
-  sim900.write(26); // CTRL+Z to send SMS
-  delay(5000);
-}
+SoftwareSerial mySerial(3, 1); // RX, TX (UART0 pins)
 
 void setup() {
-  sim900.begin(9600);
-  delay(5000);   // Let SIM900A boot and register to network
+  Serial.begin(115200);
+  mySerial.begin(9600);
 
-  sendSMS();     // Send SMS once on startup
+  delay(1000);
+  
+  Serial.println("Initializing GSM...");
+  
+  mySerial.println("AT");     
+  delay(1000);
+
+  if (mySerial.available()) {
+    Serial.println("GSM Ready");
+    while(mySerial.available()){
+      Serial.write(mySerial.read());
+    }
+  }
+
+  mySerial.println("AT+CMGF=1");
+  delay(1000);
+
+  mySerial.println("AT+CMGS=\"+639629339856\"");
+  delay(1000);
+
+  mySerial.print("Hello from ESP32!");
+  delay(500);
+
+  mySerial.write(26);
+  Serial.println("SMS Sent!");
 }
 
 void loop() {
-  // nothing here
+  if (mySerial.available()) {
+    Serial.write(mySerial.read());
+  }
 }
