@@ -7,22 +7,20 @@ AeroTech is an automated, sensor-driven aeroponics system designed to enhance ve
 ## Features
 
 - **Sensor Monitoring**: Real-time tracking of:
-
   - pH Level
   - Total Dissolved Solids (TDS)
   - Water Level
   - Temperature
 
 - **Automation**:
-
   - Microcontroller-controlled pumps and fans
   - Adaptive environmental regulation based on sensor data
   - Touchscreen Interface (LVGL)
 
 - **Remote Access & Alerts**:
-
   - Cloud Dashboard for live data logging and analytics
   - Real-time monitoring via Web Application
+  - SMS Alerts for critical sensor deviations (GSM)
 
 - **Sustainable Power**:
   - Solar energy integration with battery backup
@@ -38,6 +36,7 @@ AeroTech is an automated, sensor-driven aeroponics system designed to enhance ve
 - **Framework**: Arduino
 - **UI Library**: LVGL (Light and Versatile Graphics Library)
 - **Communication**: ESP-NOW (Device-to-Device), WiFi (Cloud Connectivity)
+- **Modules**: SIM900 (GSM/GPRS) for SMS Alerts
 
 ### Web Dashboard
 
@@ -67,7 +66,8 @@ AeroTech/
 ├── Code/
 │   ├── Embedded/
 │   │   ├── AeroTech_Main/   # Main Controller Firmware (ESP32 + LVGL)
-│   │   └── AeroTech_Sensor/ # Sensor Node Firmware
+│   │   ├── AeroTech_Sensor/ # Sensor Node Firmware
+│   │   └── AeroTech_DB_SMS_Listener/ # SMS Alert System (ESP32 + SIM900)
 │   └── Web/
 │       └── aerotech/        # Web Dashboard (Next.js + Supabase)
 ├── Docs/                    # Schematics, PCB Designs, Block Diagrams
@@ -85,6 +85,7 @@ AeroTech/
 2. Ensure necessary libraries are installed (LVGL, TFT_eSPI, etc.).
 3. Upload `AeroTech_Main` to the main controller unit.
 4. Upload `AeroTech_Sensor` to the sensor nodes.
+5. Upload `AeroTech_DB_SMS_Listener` to the SMS node.
 
 ### Web Dashboard
 
