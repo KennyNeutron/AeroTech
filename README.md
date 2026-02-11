@@ -96,3 +96,5 @@ This project is licensed under the MIT License.
 ## Acknowledgements
 
 Developed as part of the AeroTech initiative to improve sustainable farming practices using IoT and embedded systems.
+
+Adding aerotechsys2025 as collaborator
