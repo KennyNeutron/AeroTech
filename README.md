@@ -2,8 +2,6 @@
 
 AeroTech is an automated, sensor-driven aeroponics system designed to enhance vegetable farming efficiency through real-time monitoring, adaptive climate control, and remote data access. Powered by solar energy, AeroTech aims to provide a sustainable and intelligent solution for soilless agriculture.
 
----
-
 ## Features
 
 - **Sensor Monitoring**: Real-time tracking of:
@@ -25,8 +23,6 @@ AeroTech is an automated, sensor-driven aeroponics system designed to enhance ve
 - **Sustainable Power**:
   - Solar energy integration with battery backup
   - Optimized for energy efficiency in remote or off-grid locations
-
----
 
 ## Tech Stack
 
@@ -51,13 +47,9 @@ AeroTech is an automated, sensor-driven aeroponics system designed to enhance ve
 - **Actuators**: Water Pumps, Misters, Fans
 - **Power**: Solar Panels, Battery Management System
 
----
-
 ## System Architecture
 
 ![Block Diagram](Docs/AeroTech_BlockDiagram.jpg)
-
----
 
 ## Project Structure
 
@@ -74,8 +66,6 @@ AeroTech/
 ├── Assets/                  # Project Images and Resources
 └── README.md                # Project Overview
 ```
-
----
 
 ## Getting Started
 
