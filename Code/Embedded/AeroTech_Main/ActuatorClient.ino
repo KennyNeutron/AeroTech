@@ -136,6 +136,7 @@ bool httpGetJson(const String& pathAndQuery, DynamicJsonDocument& doc) {
   const String url = REST_BASE + pathAndQuery;
   if (!http.begin(tls, url)) {
     Serial.println("HTTP begin() failed");
+    isNetworkBusy = false;
     return false;
   }
   http.addHeader("apikey", SUPABASE_ANON_KEY);
@@ -149,6 +150,7 @@ bool httpGetJson(const String& pathAndQuery, DynamicJsonDocument& doc) {
   if (code != 200) {
     Serial.println(body);
     http.end();
+    isNetworkBusy = false;
     return false;
   }
 
@@ -159,6 +161,7 @@ bool httpGetJson(const String& pathAndQuery, DynamicJsonDocument& doc) {
   if (err) {
     Serial.printf("JSON parse error: %s\n", err.c_str());
     // Serial.println(body);
+    isNetworkBusy = false;
     return false;
   }
   return true;
@@ -183,6 +186,7 @@ bool httpPatchJson(const String& pathAndQuery, const String& jsonBody, String* o
   const String url = REST_BASE + pathAndQuery;
   if (!http.begin(tls, url)) {
     Serial.println("HTTP begin() failed (PATCH)");
+    isNetworkBusy = false;
     return false;
   }
 
@@ -200,6 +204,7 @@ bool httpPatchJson(const String& pathAndQuery, const String& jsonBody, String* o
   if (code < 200 || code >= 300) {
     Serial.println(body);
     http.end();
+    isNetworkBusy = false;
     return false;
   }
 
