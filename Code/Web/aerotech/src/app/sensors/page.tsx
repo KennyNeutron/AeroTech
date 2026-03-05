@@ -7,9 +7,17 @@ import { createServer } from "@/lib/supabase/server";
 import { DEVICE_ID } from "@/lib/config";
 import LiveSensors from "./LiveSensors";
 
-type WaterTarget = "Low" | "Medium" | "High";
+type WaterTarget = "Low" | "Medium" | "High" | "Full";
 const fromCode = (n: number | null | undefined): WaterTarget =>
-  n === 0 ? "Low" : n === 2 ? "High" : "Medium";
+  n === 0
+    ? "Low"
+    : n === 1
+      ? "Medium"
+      : n === 2
+        ? "High"
+        : n === 3
+          ? "Full"
+          : "Medium";
 
 export default async function SensorsPage() {
   const supabase = await createServer(); // ⬅️ await here

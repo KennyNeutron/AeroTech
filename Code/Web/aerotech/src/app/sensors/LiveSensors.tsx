@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DEVICE_ID } from "@/lib/config";
 
 /* ---------------- Types ---------------- */
-type WaterTarget = "Low" | "Medium" | "High";
+type WaterTarget = "Low" | "Medium" | "High" | "Full";
 
 type ReadingRow = {
   ph: number | null;
@@ -45,7 +45,15 @@ type Targets = {
 
 /* ---------------- Helpers ---------------- */
 const fromCode = (n: number | null | undefined): WaterTarget =>
-  n === 0 ? "Low" : n === 2 ? "High" : "Medium";
+  n === 0
+    ? "Low"
+    : n === 1
+      ? "Medium"
+      : n === 2
+        ? "High"
+        : n === 3
+          ? "Full"
+          : "Medium";
 
 const fmt = (n?: number | null, digits = 1) =>
   typeof n === "number" && !Number.isNaN(n) ? n.toFixed(digits) : "—";

@@ -10,10 +10,23 @@ import { DEVICE_ID } from "@/lib/config";
 
 /* ---------------- Types & helpers ---------------- */
 
-type WaterTarget = "Low" | "Medium" | "High";
-const toCode: Record<WaterTarget, number> = { Low: 0, Medium: 1, High: 2 };
+type WaterTarget = "Low" | "Medium" | "High" | "Full";
+const toCode: Record<WaterTarget, number> = {
+  Low: 0,
+  Medium: 1,
+  High: 2,
+  Full: 3,
+};
 const fromCode = (n: number | null | undefined): WaterTarget =>
-  n === 0 ? "Low" : n === 2 ? "High" : "Medium";
+  n === 0
+    ? "Low"
+    : n === 1
+      ? "Medium"
+      : n === 2
+        ? "High"
+        : n === 3
+          ? "Full"
+          : "Medium";
 
 /* ---------------- Page ---------------- */
 
@@ -447,7 +460,7 @@ function WaterLevelCard({
   setTarget: (v: WaterTarget) => void;
   loading?: boolean;
 }) {
-  const levels: WaterTarget[] = ["Low", "Medium", "High"];
+  const levels: WaterTarget[] = ["Low", "Medium", "High", "Full"];
 
   return (
     <div className="bg-white rounded-2xl border border-brand-100 shadow-card p-5">
