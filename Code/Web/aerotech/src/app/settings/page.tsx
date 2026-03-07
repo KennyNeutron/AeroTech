@@ -10,8 +10,8 @@ import { DEVICE_ID } from "@/lib/config";
 
 /* ---------------- Types & helpers ---------------- */
 
-type WaterTarget = "Low" | "Medium" | "High" | "Full";
-const toCode: Record<WaterTarget, number> = {
+type WaterTarget = "Low" | "Medium" | "High" | "Full" | "Error";
+const toCode: Record<string, number> = {
   Low: 0,
   Medium: 1,
   High: 2,
@@ -26,7 +26,9 @@ const fromCode = (n: number | null | undefined): WaterTarget =>
         ? "High"
         : n === 3
           ? "Full"
-          : "Medium";
+          : n === 4
+            ? "Error"
+            : "Medium";
 
 /* ---------------- Page ---------------- */
 
